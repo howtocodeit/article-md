@@ -1,10 +1,12 @@
 ---
 title: The Ultimate Guide to Rust Newtypes
+meta_title: The Ultimate Guide to Rust Newtypes
 slug: ultimate-guide-rust-newtypes
 description: Clean up your code, clarify business logic and improve test coverage with Rust's newtype wrappers.
+meta_description: Clean up your code, clarify business logic and improve test coverage with Rust's newtype wrappers.
 color: peony
 tags: [rust, newtypes, type-driven design]
-version: 1.0.5
+version: 1.0.6
 ---
 
 # The Ultimate Guide to Rust Newtypes
