@@ -4,7 +4,7 @@ slug: ultimate-guide-rust-newtypes
 description: Clean up your code, clarify business logic and improve test coverage with Rust's newtype wrappers.
 color: peony
 tags: [rust, newtypes, type-driven design]
-version: 1.0.4
+version: 1.0.5
 ---
 
 # The Ultimate Guide to Rust Newtypes
@@ -18,8 +18,7 @@ But if reading The Book is your only exposure to newtypes, you might think that 
 ---info
 The Orphan Rule
 
-You can implement a trait for a type only if either the trait or the type is defined in your crate.
----
+## You can implement a trait for a type only if either the trait or the type is defined in your crate.
 
 By wrapping `Vec<String>` in a tuple struct, The Book shows us how to implement a trait defined in a crate we don't control on a struct which is also outside our control.
 
@@ -93,8 +92,7 @@ pub enum CreateUserError {
 ---info
 `thiserror`
 
-When you see `#[derive(Error)]` `^4`, you're usually watching the [`thiserror` crate](https://docs.rs/thiserror/latest/thiserror/) in action. `thiserror` is a powerful library for quickly creating expressive error types, and I highly recommend it.
----
+## When you see `#[derive(Error)]` `^4`, you're usually watching the [`thiserror` crate](https://docs.rs/thiserror/latest/thiserror/) in action. `thiserror` is a powerful library for quickly creating expressive error types, and I highly recommend it.
 
 And complex error types means you need a lot of test cases to cover all practical outcomes:
 
@@ -197,9 +195,9 @@ I'm glad you asked.
 Instead of running validations on data that may or may not be valid when it's already inside the core of your application, require your business logic to accept only data that has been parsed into an acceptable representation.
 
 ---info
-**"Parse, don't validate"
-This phrase was made famous in software engineering circles by [Alexis King's blog post](https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/) of the same name. It's one of the all-time great pieces of writing on type-driven design.
----
+"Parse, don't validate"
+
+## This phrase was made famous in software engineering circles by [Alexis King's blog post](https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/) of the same name. It's one of the all-time great pieces of writing on type-driven design.
 
 First, let's pull our email address validation code out of the business function it was cluttering. From this point onwards, I'll be giving code only for `EmailAddress` – I've left the implementation of `Password` as an [exercise](#exercises).
 
@@ -233,7 +231,7 @@ fn create_user(email: EmailAddress, password: Password) -> Result<User, UserAlre
 }
 ```
 
-This is very exciting. In order to get hold of an `EmailAddress`, a raw string _must_ pass the validation performed in the `EmailAddress::new` constructor. That means that any email address passed to `create_user` _must_ be valid, so `create_user` no longer needs to check – it's all business logic, baby! `^10
+This is very exciting. In order to get hold of an `EmailAddress`, a raw string _must_ pass the validation performed in the `EmailAddress::new` constructor. That means that any email address passed to `create_user` _must_ be valid, so `create_user` no longer needs to check – it's all business logic, baby! `^10`
 
 ---warning
 Email address validation
@@ -242,8 +240,7 @@ You may be surprised by what counts as a valid email address. Take this Lovecraf
 
 No, really. This is an honest-to-god example from an actual [RFC](https://datatracker.ietf.org/doc/html/rfc1711.html#section-7).
 
-Never write your own email validation regex `^8`. Don't copy-paste regexes you find on Stack Overflow. Use a well maintained library with good community standing, and proceed on the assumption that they've also got it wrong.
----
+## Never write your own email validation regex `^8`. Don't copy-paste regexes you find on Stack Overflow. Use a well maintained library with good community standing, and proceed on the assumption that they've also got it wrong.
 
 Voilá. We have drastically simplified the error handling. Both `EmailAddress::new` and `create_user` now return only one type of error each `^7` `^9`. And notice how, at `^9`, even our error types contain guaranteed-valid, type-safe fields!
 
@@ -285,8 +282,7 @@ If you're especially perceptive, you may have spotted something off about our de
 
 Checking that a user exists requires a database lookup but, for the sake of simplifying my examples, `create_user` doesn't allow for a mock database to be injected during test.
 
-If you're hungry to learn a clean, maintainable way to achieve this, check out [Master Hexagonal Architecture in Rust](https://www.howtocodeit.com/articles/master-hexagonal-architecture-rust)!
----
+## If you're hungry to learn a clean, maintainable way to achieve this, check out [Master Hexagonal Architecture in Rust](https://www.howtocodeit.com/articles/master-hexagonal-architecture-rust)!
 
 ### Newtype mutability
 
@@ -338,8 +334,7 @@ Deriving these standard traits for _any_ type where they make sense is a good ha
 
 This is especially important if you're writing a library, since your users won't be able to implement these traits themselves due to [the Orphan Rule]("#the-orphan-rule"). They'd have to wrap your newtypes in their own newtypes just to get this basic functionality.
 
-Kiss those GitHub stars goodbye.
----
+## Kiss those GitHub stars goodbye.
 
 But what about `Display`? There's no `derive` macro for `Display`, so let's do it manually for now.
 
@@ -353,6 +348,7 @@ impl Display for EmailAddress {
 
 ---info
 Implementing `Display` gets us a free implementation of `std::string::ToString`. 🎉
+
 ---
 
 ### Manually implement special cases
@@ -481,8 +477,7 @@ Whether you choose to implement `FromStr` in addition to `From` or `TryFrom` dep
 
 In the latter case, _be consistent_. Whatever your team decides, document it and use a linter to enforce your choice, because none of you can be trusted to remember.
 
-I don't usually implement `FromStr`. It's one less thing to test.
----
+## I don't usually implement `FromStr`. It's one less thing to test.
 
 ## From newtypes to primitives: `AsRef`, `Deref`, `Borrow` and more
 
@@ -508,8 +503,7 @@ impl EmailAddress {
 ---info
 Naming conventions
 
-Confused about when to name your methods `to_x`, `into_x` and `as_x`? [The Rust API guidelines](https://rust-lang.github.io/api-guidelines/naming.html#ad-hoc-conversions-follow-as_-to_-into_-conventions-c-conv) have got you covered.
----
+## Confused about when to name your methods `to_x`, `into_x` and `as_x`? [The Rust API guidelines](https://rust-lang.github.io/api-guidelines/naming.html#ad-hoc-conversions-follow-as_-to_-into_-conventions-c-conv) have got you covered.
 
 Recall that implementing `Display` gives us a free implementation of `ToString`. Shadowing this implementation is such bad news that [Clippy considers this an error](https://rust-lang.github.io/rust-clippy/master/index.html#/inherent_to_string_shadow_display). That's why I haven't defined `EmailAddress::to_string` at `^18`.
 
@@ -577,8 +571,7 @@ Finally, it causes `*email` to desugar to `*Deref::deref(&email)` `^21`.
 ---warning
 Careful! `*email` is _not_ equivalent to `Deref::deref(&email)`, which is a source of confusion for people who expect the dereference operator `*` to return the return type of the `deref` implementation, which in our case would be `&str`.
 
-`*` dereferences all the way down to memory bedrock – `str`.
----
+## `*` dereferences all the way down to memory bedrock – `str`.
 
 So why do we have to be cautious with `Deref`?
 
@@ -593,8 +586,7 @@ The best advice I've seen on this issue comes from [Rust for Rustaceans](https:/
 ---info
 Inherent methods
 
-An [inherent method](https://rust-for-rustaceans.com/) of type `T` is any method defined in a standard `impl T` block. Remember, methods have a `self` or `&self` receiver (or their `mut` variants). Functions don't.
----
+## An [inherent method](https://rust-for-rustaceans.com/) of type `T` is any method defined in a standard `impl T` block. Remember, methods have a `self` or `&self` receiver (or their `mut` variants). Functions don't.
 
 If a newtype has only associated functions, it has no methods that could inadvertently intercept method calls intended for the wrapped type. Behold:
 
@@ -650,6 +642,7 @@ Luckily, `SmartBox` believes that all views should be heard – even the ones t
 
 ---warning
 If you're looking for a way to shoot yourself in the foot with safe Rust, the `Borrow` trait is a great option.
+
 ---
 
 `Borrow` is deceptively simple. A type which is `Borrow<T>` can give you a `&T`.
@@ -843,6 +836,7 @@ As you can see, practically _everything_ we've been doing manually up to this po
 
 ---info
 `nutype`'s support for `new_unchecked` generation and `regex` validation lies behind their respective feature flags. You can add them with `cargo add nutype --features new_unchecked regex`.
+
 ---
 
 Beware the corners that you choose to cut, though. `nutype`'s generated error messages are quite vague, and there's no way to override them or include additional detail:
@@ -856,8 +850,7 @@ This hampers debugging and puts the onus on the caller to wrap the newtype's ass
 ---warning
 Unlike `derive_more`, using `nutype` is a commitment. By adopting its santizers, validations and error types, you will find it quickly becomes a hard dependency that pervades your codebase and is tough to migrate away from.
 
-This might be fine for you, but take your time and think about how `nutype` will work for your particular application and organization before adopting it.
----
+## This might be fine for you, but take your time and think about how `nutype` will work for your particular application and organization before adopting it.
 
 Go now. I have nothing more to teach you.
 
