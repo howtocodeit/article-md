@@ -4,7 +4,7 @@ slug: ultimate-guide-rust-newtypes
 description: Clean up your code, clarify business logic and improve test coverage with Rust's newtype wrappers.
 color: peony
 tags: [rust, newtypes, type-driven design]
-version: 1.0.1
+version: 1.0.2
 ---
 
 # The Ultimate Guide to Rust Newtypes
@@ -829,9 +829,9 @@ Go now. I have nothing more to teach you.
 
 # Exercises
 
-Design a newtype, `Password`, representing a user's password.
+1. Design a newtype, `Password`, representing a user's password.
 
-1. The `Password` constructor should ensure that passwords submitted by users are at least 8 ASCIl characters long – any other password policy you'd like to enforce is up to you!
+The `Password` constructor should ensure that passwords submitted by users are at least 8 ASCIl characters long – any other password policy you'd like to enforce is up to you!
 
 In real-life code, we want to minimise the time that user passwords are exposed as human-readable strings. A classic mistake is logging raw passwords accidentally. With this in mind, `Password` should not hold onto the user-submitted string, but should store a hash instead.
 
