@@ -4,7 +4,7 @@ slug: ultimate-guide-rust-newtypes
 description: Clean up your code, clarify business logic and improve test coverage with Rust's newtype wrappers.
 color: peony
 tags: [rust, newtypes, type-driven design]
-version: 1.0.2
+version: 1.0.3
 ---
 
 # The Ultimate Guide to Rust Newtypes
@@ -829,17 +829,20 @@ Go now. I have nothing more to teach you.
 
 # Exercises
 
-1. Design a newtype, `Password`, representing a user's password.
+1. 🦀🦀
+   Design a newtype, `Password`, representing a user's password.
 
 The `Password` constructor should ensure that passwords submitted by users are at least 8 ASCIl characters long – any other password policy you'd like to enforce is up to you!
 
 In real-life code, we want to minimise the time that user passwords are exposed as human-readable strings. A classic mistake is logging raw passwords accidentally. With this in mind, `Password` should not hold onto the user-submitted string, but should store a hash instead.
 
-2. Implement a method on `Password` allowing it to be compared with candidate password strings submitted by users during login attempts.
+2. 🦀
+   Implement a method on `Password` allowing it to be compared with candidate password strings submitted by users during login attempts.
 
 Your method should return a `Result`: `0k()` if `Password` matches the candidate, or an `Err` of your choice if not.
 
-3. Company password policies change over time! Redesign `Password` so that future changes to the password policy won't require changes to the `Password` type.
+3. 🦀🦀🦀
+   Company password policies change over time! Redesign `Password` so that future changes to the password policy won't require changes to the `Password` type.
 
 For example, the password policy in question 1 is that all passwords must be at least 8 ASCIl characters long. A product manager has now had the great idea that all passwords must contain at least one emoji. 🙃
 
