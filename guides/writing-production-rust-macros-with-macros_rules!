@@ -6,7 +6,7 @@ description: Learn how experts write real production macros.
 meta_description: Learn how experts write real production Rust macros with macro_rules!
 color: turquoise
 tags: [rust, macros]
-version: 1.0.0
+version: 1.0.1
 ---
 
 This is an intervention.
@@ -222,7 +222,7 @@ It's a convenience that saves us from writing our own call to `PartialEq::eq`, a
 
 It's a very convenient convenience. I particularly like how it hides the existence of the `Option<fmt::Arguments>` required by `assert_failed` from the caller. We're busy developers, after all. Not having to write `None` at every assertion without format args might just be the thing standing between us and total burnout. I pray we'll never find out.
 
-### Write dynamic Rust with intermediate `macro_rules!`
+## Write dynamic Rust with intermediate `macro_rules!`
 
 Alright, let's kick it up a notch.
 
@@ -803,7 +803,7 @@ Recursive counting
 
 Macros are limited to 128 recursions by default, so this approach is unsuitable for counting large collections.
 
-Try [the exercises](https://www.howtocodeit.com/articles/writing-production-rust-macros-with-macro-rules#exercises) to explore alternative ways of counting with macros.
+Try [the exercises](#exercises) to explore alternative ways of counting with macros.
 ---
 
 
