@@ -6,7 +6,7 @@ description: Clean up your code, clarify business logic and improve test coverag
 meta_description: Clean up your code, clarify business logic and improve test coverage with Rust's newtype wrappers.
 color: peony
 tags: [rust, newtypes, type-driven design]
-version: 1.0.7
+version: 1.0.9
 ---
 
 # The Ultimate Guide to Rust Newtypes
@@ -15,7 +15,7 @@ version: 1.0.7
 
 You've read [The Book](https://doc.rust-lang.org/book/), so I'm sure you've heard of newtypes – thin wrappers around other Rust types that allow you to extend their functionality.
 
-But if reading The Book is your only exposure to newtypes, you might think that they're only useful for getting around the **Orphan Rule**. Think again.
+But if reading The Book is your only exposure to newtypes, you might think that they're only useful for getting around the Orphan Rule. Think again.
 
 ---info
 The Orphan Rule
@@ -334,7 +334,7 @@ Build the habit
 
 Deriving these standard traits for _any_ type where they make sense is a good habit to develop – even if you don't immediately see a use for them.
 
-This is especially important if you're writing a library, since your users won't be able to implement these traits themselves due to [the Orphan Rule]("#the-orphan-rule"). They'd have to wrap your newtypes in their own newtypes just to get this basic functionality.
+This is especially important if you're writing a library, since your users won't be able to implement these traits themselves due to [the Orphan Rule](#the-orphan-rule). They'd have to wrap your newtypes in their own newtypes just to get this basic functionality.
 
 ## Kiss those GitHub stars goodbye.
 
@@ -406,7 +406,7 @@ Notice that we're now deriving `PartialEq` but not `PartialOrd` `^13`. How come?
 
 If an implementation of `Ord` exists, a correct implementation of `PartialOrd::partial_cmp` simply wraps the return value of `Ord::cmp` in an `Option` `^14` `^15`. This prevents us from accidentally implementing `Ord` and `PartialOrd` in ways that disagree with each other.
 
-A derived implementation of `PartialOrd` _wouldn't_ call our manual `Ord` implementation – it would call `PartialOrd` on the underlying `f64`. This isn't what we want, so we need to define both `PartialOrd` and `Ord` ourselves, or [Clippy will yell at us](https://rust-lang.github.io/rust-clippy/master/index.html#/derive_ord_xor_partial_ord).
+A derived implementation of `PartialOrd` _wouldn't_ call our manual `Ord` implementation – it would call `PartialOrd` on the underlying `f64`. This isn't what we want, so we need to define both `PartialOrd` and `Ord` ourselves, or [Clippy will yell at us](https://rust-lang.github.io/rust-clippy/master/index.html#derive_ord_xor_partial_ord).
 
 The logic is reversed for `Eq` and `PartialEq`. If an implementation of `PartialEq` exists, `Eq` is simply a marker trait that indicates that the type has a total equality. By deriving `PartialEq` and manually adding an `Eq` implementation, we're telling the compiler, "chill out, I know what's good".
 
@@ -507,7 +507,7 @@ Naming conventions
 
 ## Confused about when to name your methods `to_x`, `into_x` and `as_x`? [The Rust API guidelines](https://rust-lang.github.io/api-guidelines/naming.html#ad-hoc-conversions-follow-as_-to_-into_-conventions-c-conv) have got you covered.
 
-Recall that implementing `Display` gives us a free implementation of `ToString`. Shadowing this implementation is such bad news that [Clippy considers this an error](https://rust-lang.github.io/rust-clippy/master/index.html#/inherent_to_string_shadow_display). That's why I haven't defined `EmailAddress::to_string` at `^18`.
+Recall that implementing `Display` gives us a free implementation of `ToString`. Shadowing this implementation is such bad news that [Clippy considers this an error](https://rust-lang.github.io/rust-clippy/master/index.html#inherent_to_string_shadow_display). That's why I haven't defined `EmailAddress::to_string` at `^18`.
 
 Consider carefully how other developers will use your code. If you're writing an application maintained by one team, which won't be a dependency of some higher-level code, you can stop implementing getters here.
 
@@ -588,7 +588,7 @@ The best advice I've seen on this issue comes from [Rust for Rustaceans](https:/
 ---info
 Inherent methods
 
-## An [inherent method](https://rust-for-rustaceans.com/) of type `T` is any method defined in a standard `impl T` block. Remember, methods have a `self` or `&self` receiver (or their `mut` variants). Functions don't.
+## An [inherent method](https://doc.rust-lang.org/reference/items/implementations.html#inherent-implementations) of type `T` is any method defined in a standard `impl T` block. Remember, methods have a `self` or `&self` receiver (or their `mut` variants). Functions don't.
 
 If a newtype has only associated functions, it has no methods that could inadvertently intercept method calls intended for the wrapped type. Behold:
 
@@ -636,7 +636,7 @@ At `^22` we implement `Deref` so that `SmartBox<T>::deref` returns `&T`. Our `Sm
 
 But what's this? A bewildered developer wants to wrap their `ConfusedUnitStruct` in `SmartBox`! `ConfusedUnitStruct` has a method with some very concerning views about the path to Rust mastery `^24`.
 
-Luckily, `SmartBox` believes that all views should be heard – even the ones that are wrong. Because `SmartBox` implements `print_best_rust_resource` as an associated function, it can't clash with any method implemented by the types it derefs to. Both functions can be called unambiguously `^25.
+Luckily, `SmartBox` believes that all views should be heard – even the ones that are wrong. Because `SmartBox` implements `print_best_rust_resource` as an associated function, it can't clash with any method implemented by the types it derefs to. Both functions can be called unambiguously `^25`.
 
 > Prefer associated functions to inherent methods on generic wrapper types
 
@@ -793,7 +793,7 @@ We're almost at the end of our journey. We're walking taller, writing better cod
 
 Indeed, writing robust newtypes comes with a lot of boilerplate. I have two libraries to share with you that can slash that boilerplate down to size, but let's make an agreement first: before you start using them, practice writing your own newtypes by hand.
 
-Before introducing magic from external crates, you should understand what you're automating and why. Check out [the exercises]("#exercises") at the end of this article for a head start!
+Before introducing magic from external crates, you should understand what you're automating and why. Check out [the exercises](#exercises) at the end of this article for a head start!
 
 ### Using `derive_more` to... derive more
 
