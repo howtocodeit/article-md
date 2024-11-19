@@ -6,7 +6,7 @@ description: Learn to model and handle any error using idiomatic Rust.
 meta_description: Learn to model and handle any error using idomatic Rust.
 color: sky
 tags: [rust, architecture, error handling]
-version: 1.0.0
+version: 1.0.1
 ---
 
 Are you overwhelmed by the amount of choice Rust gives us for handling errors? Confused about when to return a structured error type or a `Box<dyn Error>`? Intimidated by `Box<dyn Error + Send + Sync + 'static>`'s beefy type signature?
@@ -158,9 +158,7 @@ Okay, we've nailed the essentials. Let's get into the choice that confuses most 
 
 ### When to use `Box<dyn Error>` and friends
 
-`Box<dyn Error>` is Rust's vaguest error type. It's just some object that implements `Error` 🤷.
-`
-`Box<dyn Error + Send + Sync + 'static>` is its thread-safe counterpart.
+`Box<dyn Error>` is Rust's vaguest error type. It's just some object that implements `Error` 🤷. `Box<dyn Error + Send + Sync + 'static>` is its thread-safe counterpart.
 
 The `Error` is boxed because, as a dynamic trait object, we don't know its size at compile time. We have to allocate it on the heap.
 
@@ -359,7 +357,7 @@ Dynamic errors are great for consolidating a wide range of error types and retur
 
 In Part III, we'll look at structured, statically typed errors as carriers of data that we can handle programmatically. More than that though, we'll see how they serve as invaluable, innate documentation for other developers.
 
-When we understand both of these error handling styles, we'll bring them together in part three, equipping ourselves with the knowledge to handle any kind of error that might arise, and avoid some nasty footguns.
+When we understand both of these error handling styles, we'll bring them together, equipping ourselves with the knowledge to handle any kind of error that might arise, and avoid some nasty footguns.
 
 ## Structured error handling in Rust
 
