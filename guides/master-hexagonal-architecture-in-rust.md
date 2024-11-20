@@ -6,7 +6,7 @@ description: Take the pain out of scaling. This guide has everything you need to
 meta_description: Everything you need to write flexible, future-proof Rust applications using hexagonal architecture.
 color: hornet
 tags: [rust, architecture, type-driven design]
-version: 1.0.1
+version: 1.0.2
 ---
 
 Hexagonal Architecture. You've heard the buzzwords. You've wondered, "why hexagons?". You think domain-driven design is involved, somehow. Your company probably says they're using it, but you suspect they're doing it wrong.
@@ -692,16 +692,16 @@ We're not quite there yet, but this is a vast improvement. Check out the handler
 
 ```rust
 pub async fn create_author<AR: AuthorRepository>(  
-    State(state): State<AppState<AR>>, `^22`
+    State(state): State<AppState<AR>>, ^22
     Json(body): Json<CreateAuthorHttpRequestBody>,  
 ) -> Result<ApiSuccess<CreateAuthorResponseData>, ApiError> {
-	let domain_req = body.try_into_domain()?; `^23`
+	let domain_req = body.try_into_domain()?; ^23
     state  
         .author_repo  
         .create_author(&domain_req)  
         .await  
-        .map_err(ApiError::from)  `^24`
-        .map(|ref author| ApiSuccess::new(StatusCode::CREATED, author.into())) `^25` 
+        .map_err(ApiError::from)  ^24
+        .map(|ref author| ApiSuccess::new(StatusCode::CREATED, author.into())) ^25 
 }
 ```
 
