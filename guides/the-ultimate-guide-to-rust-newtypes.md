@@ -6,7 +6,7 @@ description: Clean up your code, clarify business logic and improve test coverag
 meta_description: Clean up your code, clarify business logic and improve test coverage with Rust's newtype wrappers.
 color: peony
 tags: [rust, newtypes, type-driven design]
-version: 1.0.9
+version: 1.0.10
 ---
 
 # The Ultimate Guide to Rust Newtypes
@@ -94,7 +94,7 @@ pub enum CreateUserError {
 ---info
 `thiserror`
 
-## When you see `#[derive(Error)]` `^4`, you're usually watching the [`thiserror` crate](https://docs.rs/thiserror/latest/thiserror/) in action. `thiserror` is a powerful library for quickly creating expressive error types, and I highly recommend it.
+When you see `#[derive(Error)]` `^4`, you're usually watching the [`thiserror` crate](https://docs.rs/thiserror/latest/thiserror/) in action. `thiserror` is a powerful library for quickly creating expressive error types, and I highly recommend it.
 
 And complex error types means you need a lot of test cases to cover all practical outcomes:
 
@@ -242,7 +242,7 @@ You may be surprised by what counts as a valid email address. Take this Lovecraf
 
 No, really. This is an honest-to-god example from an actual [RFC](https://datatracker.ietf.org/doc/html/rfc1711.html#section-7).
 
-## Never write your own email validation regex `^8`. Don't copy-paste regexes you find on Stack Overflow. Use a well maintained library with good community standing, and proceed on the assumption that they've also got it wrong.
+Never write your own email validation regex `^8`. Don't copy-paste regexes you find on Stack Overflow. Use a well maintained library with good community standing, and proceed on the assumption that they've also got it wrong.
 
 Voilá. We have drastically simplified the error handling. Both `EmailAddress::new` and `create_user` now return only one type of error each `^7` `^9`. And notice how, at `^9`, even our error types contain guaranteed-valid, type-safe fields!
 
@@ -676,7 +676,7 @@ impl Hash for EmailAddress {
 
 impl Borrow<str> for EmailAddress {
     fn borrow(&self) -> &str {
-        &self.0  `^28`
+        &self.0  ^28
     }
 }
 
