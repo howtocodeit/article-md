@@ -6,7 +6,7 @@ description: Take the pain out of scaling. This guide has everything you need to
 meta_description: Everything you need to write flexible, future-proof Rust applications using hexagonal architecture.
 color: hornet
 tags: [rust, architecture, type-driven design]
-version: 1.0.3
+version: 1.1.0
 ---
 
 Hexagonal Architecture. You've heard the buzzwords. You've wondered, "why hexagons?". You think domain-driven design is involved, somehow. Your company probably says they're using it, but you suspect they're doing it wrong.
@@ -1339,17 +1339,189 @@ All I ask is that, whatever convention you adopt, you document it for both new a
 
 Document your decisions, _I beg you_.
 
-### Is hexagonal architecture right for me?
+### Make an informed decision
 
 In Part IV, we'll be discussing the trade-offs of using hexagonal architecture compared with other common architectures, and see how it simplifies the jump to microservices when the time is right.
 
 ## Trade-offs of hexagonal architecture in Rust
 
-_Part four is coming soon._
+### Put down the Kool-Aid
+
+By this point in the guide, you likely fall into one of two camps.
+
+In the first camp, my converts have sold their possessions and donated the proceeds to the six-sided church. They gather round the fire to sing songs in praise of Hexagonal Architecture, hallowed be its name.
+
+Across the creek, the second camp hunger for blood. Triggered by the structure, formality and upfront complexity of hexagonal architecture, they prepare to sacrifice the false idol on the bonfire of software engineering trends. They're incensed by the suggestion that hexagonal architecture is superior to others.
+
+Each camp checks its map of the software development landscape, seeking the most effective path to destroy the other. To their surprise, however, the map shows nothing but a great swamp, without end or beginning. This is "The Middle Ground".
+
+> Email sign-up
+
+### Strengths and weaknesses of hexagonal architecture
+
+Hexagonal architecture is a power tool. It's the hydraulic press of software architectures, and whether it's the optimal architecture for you depends on whether you want to crush a car or a Coke can.
+
+Parts I to III showed off the strengths of hexagonal architecture:
+* It's highly decoupled, making it a pleasure to evolve and scale.
+* It greatly increases your unit test surface for rigorous testing of code with complex failure modes.
+* There's a single source of truth for the logic of each business domain, with a correspondingly simple dependency graph.
+* There's a home for everything. A predictable project structure keeps your code organized and your team happy.
+
+Nothing comes for free, though. What are the costs?
+
+Compared to the Very Bad Application `^1`, our hexagonal app takes a lot more code to achieve the same result. Instead of a raw, axum HTTP handler that simply takes the request body and shoves it straight into an SQLite database, we have multiple layers of abstraction:
+
+* axum becomes an implementation detail, concealed by our own HTTP package.
+* The request body must be converted to a domain representation before we can work with it.
+* Business logic is encapsulated by the `Service` trait and injected into the handler.
+* SQLite is an implementation detail hidden behind a repository trait implementation.
+* Anything we pull out of the database has to be converted to a domain representation before it can be used.
+
+This isn't boilerplate. It's not useless filler. All this extra code is required to achieve the benefits listed above. But clearly there's a threshold below which you'll spend more time writing abstractions and transformations than you'll save through easy scaling and fewer production incidents.
+
+Translations from transport data types to domain data types aren't free, either. For many apps, the cost is negligible – a tiny fraction of the compute required by the business logic. But for some apps this matters. For embedded software, every byte of memory might count. High-performance systems, such as high-frequency trading software, sacrifice readability for speed. Hexagonal architecture would be a poor fit.
+
+Let's not forget the barrier to entry. Here we are, thousands of words deep into a hexagonal architecture tutorial. Getting it right requires time and space for active learning. Sustaining a hexagonal codebase requires a clear technical vision and a well-trained team. _Everyone_ must understand the rationale and implementation of the architecture.
+
+Most tech companies fail to invest in their people this way. The training and development available to professional software engineers is dire, and initiatives like adopting hexagonal architecture are led by evangelists learning on their own time. Sadly, they're doomed to fail, because building this way requires a culture that gets everyone on the same page.
+
+> Adopting hexagonal architecture isn't just a technical investment, it's a cultural one.
+
+Assuming I haven't scared you off, let's go through some examples to help you decide if hexagonal architecture is right for you.
+
+### Is hexagonal architecture right for you?
+
+#### Solo developers and personal projects
+
+If you're in the blessed position of being able to keep your entire codebase in your head – and you don't plan to share it – hexagonal architecture will slow you down.
+
+As a solo dev, you'll have a clear idea of how likely you are to swap out your database, introduce async messaging or migrate to RPC from REST (probably never). And what good will increasing your test surface do if you can just eyeball your app to see that it's working?
+
+In this scenario, abstractions like services and repositories make your code _more_ fragile, not less. It's more code to mentally account for, with no practical upside.
+
+However, I do recommend small, personal projects as playgrounds to learn and experiment with hexagonal architecture. Building a complete application, even a trivial one, will develop your ability to think hexagonally.
+
+> Use small, personal projects as playgrounds to learn and experiment with hexagonal architecture.
+
+Legacy code is created by engineers learning new techniques on the job. Take the time to build your intuition in a low-stakes environment. Go deep on details like domain boundaries and error handling. Write _better-than-production_ code at home, then bring your expertise to work.
+
+#### Applications with little business logic
+
+Does your program tick along happily on an eighth of a vCPU? Is it a lightweight CRUD app that just writes what it's given and reads what it's asked for? Is deserializing a kilobyte of JSON the most ambitious thing it's done this week?
+
+Don't overcomplicate things. Apps that don't have any business logic don't need ports and adapters – there's nothing to encapsulate.
+
+> Apps that don't have any business logic don't need ports and adapters.
+
+If you're compelled to test your request handlers in isolation from your data store, you might still consider using the repository pattern. On the other hand, if your app is so basic that this would be more effort than comprehensively integration testing, int test instead.
+
+#### Startups that want to scale hard
+
+You're a one-man band or a small team. Your code just about fits in your head, and the business logic doesn't do anything crazy. But you've got dreams. You want to take this all the way, and you need a rocket to get you there.
+
+Build hexagonally. If you can do this from day one, all the better. Don't find yourself cruising towards your series A with the engines on fire and half your dev team trying to put it out.
+
+Hexagonal architecture gives you comprehensive test coverage from the start. It allows you to make the wrong choice of database and spring gracefully away from danger. It lets you support new customer needs without mangling what already works. It's not just an architecture _of_ scale, it's an architecture _for scaling_.
+
+> It's not just an architecture _of_ scale, it's an architecture _for scaling_.
+
+---warning
+"Founders don't have time for tests"
+
+There's a common sentiment that writing tests is incompatible with launching a business quickly. If a founder is burning the midnight oil, why would they be adding tests instead of features?
+
+Maybe this was true once, but we live in an age where generative AI can spit out comprehensive unit tests in seconds. In your house style, no less.*
+
+I've found AI-generated tests to be particularly accurate when there are clear abstraction boundaries between the different layers of your code. For example, testing an HTTP handler with a mock service, so that the language model doesn't need to fit the service implementation in its context.
+
+This is already the hallmark of a well-architected application – if your goal is to scale, the benefits of hexagonal coding compound.
+
+\*_As of November 2024, I find I'm most productive using [Cursor](https://www.cursor.com/) hooked up to [Claude 3.5 Sonnet](https://www.anthropic.com/news/claude-3-5-sonnet)._
+---warning
+
+Hexagonal architecture also saves you from true folly – launching your product as microservices.
+
+In ["How to choose the right domain boundaries"](#how-to-choose-the-right-domain-boundaries), we learned about the importance of starting with few, large business domains. Each domain encapsulates [entities](#entities-vs-records) that change atomically.
+
+We start with large domains because our instincts about where domain boundaries should be are often wrong. User behavior causes applications to evolve organically. As domains get smaller, you'll find yourself correcting the boundaries – and their dependent code – more often.
+
+> Battle-testing your app reveals entities and relations you can't predict.
+
+Now imagine you work for a stealth start-up building its MVP. Karl, the founder, calls you over to talk architecture. You're concerned by Karl's recent weight loss and accelerated balding. Did he always have that facial tic? 
+
+Your company doesn't have customers yet, but Karl claims to know what the correct domain boundaries are, having seen them in a dream. You think this unlikely, since he doesn't appear to have slept.
+
+Karl is so confident in these boundaries that he orders you to place each domain in a separate microservice. In the face of your protests, he mutters something about "extreme scale" and "the valuation", and sacrifices a goat to the dark god of network partitions*.
+
+This is what go-live looks like with microservices. All the pain of incorrect domain boundaries, now with network hops.
+
+---info
+\*There exists no language in which His dark name can be pronounced. The closest known representation in English rhymes with "works on my machine".
+---info
+
+By starting with a coarse-grained hexagonal monolith, you can refine your domain boundaries in response to observed use patterns. If and when you reach the _organizational_ scale where microservices are necessary, it's a relatively simple matter of extracting these battle-tested domains into their own microservices.
+
+Remember – a hexagonal domain doesn't care where it gets its requests from. It could be a request from another domain running in the same process. It could be an RPC from an internal microservice, or a RESTful request from the outside world. It doesn't matter.
+
+> Hexagonal architecture _scales_.
+
+#### Big team, big monolith, big headache
+
+Most teams reach for microservices when their monolith has become too large, overloaded and impenetrable to manage. They're resigned to PR conflict purgatory because everyone's code is interdependent and build times are charted by the passage of seasons.
+
+If this is you, and you have the power to lead architectural change, please consider refactoring your chaotic evil monolith to a hexagonal monolith before making the leap to microservices.
+
+> If you can't build a modular monolith, you're not qualified to run microservices.
+
+The situation won't be improved by pulling out a group of features that look like they belong together, putting them somewhere else on the network, and calling it a microservice.
+
+That initial decomposition is a guess at where the domain boundaries are. Code that once depended on the extracted service will now be making fallible network calls. You will find, inevitably, that some of these should have stayed in-process. You might find that _more_ should have been cut away from the monolithic flank. Unfortunately, now that there are many theoretically – but not practically – independent microservices, it's unclear where this orphaned code should live.
+
+Migration to a hexagonal monolith turns the difficulty down by taking out the networking element. Start by identifying just one business domain you'd like to extract from the monolith. Your first stab at decomposition shouldn't move this to a microservice, but to a clearly bounded domain within the existing monolith, called via ports and adapters.
+
+> Migrate to clearly bounded domains within your existing monolith.
+
+Observe how the the rest of the tangled, heretical codebase interfaces with your hexagonal sanctuary. Refine the boundaries until they stabilize. This is much easier without the network hop. When the API to your domain is reasonably stable, it's ready to become a microservice.
+
+Of course, the reason microservices seem so appealing is because they solve organizational pressures (teams treading on each other's toes) and resource pressures (big boxes to run big apps). How does hexagonal decomposition address that if all the code still lives in the same app?
+
+> Prioritize the code that causes the biggest organizational and resource pressures.
+
+An old monolith may take years to decompose, but it's not an all-or-nothing process. Prioritize the code that causes the biggest organizational and resource pressures, grit your teeth for a couple of months to make it hexagonal – _get the domain boundaries right_ – then pull those domains into microservices. You don't have to refactor the whole application before extracting stable domain APIs.
+
+By rushing towards a distributed architecture, you'll turn a bad monolith into bad microservices. *Legacy®: Networked Edition*.
+
+By guinea-pigging internal domains, you introduce the network complexity only after the business complexity is solved.
+
+#### Greenfield projects in established companies
+
+If you work for the kind of large, established business where success is more about saying yes to the right people than writing good code, you may be tempted to stop reading here and go back to speculating when your next stock options will vest. You have my full support.
+
+However, if you find yourself in a position to influence the direction of a new codebase within a well-resourced, established organization, use hexagonal architecture to cultivate a serene glade within Mirkwood.
+
+Here's why:
+
+* The business logic must be at least moderately complex, or the business wouldn't bother assembling a team for it.
+* Dependencies like databases, message queues, etc. will _certainly_ change based on the whims and shifting preferences of higher-ranking managers.
+* This project – assuming it isn't canned when the quarterly earnings fall short – may be maintained for years, by hundreds of people who aren't you. You owe them a sane project structure with proper test coverage.
+
+Cultural inertia may be against you. The whole team needs to buy in to hexagonal architecture and understand how it hangs together. If they're as excited as you are to start fresh and do better, you might just pull it off.
+
+#### High-performance applications
+
+We all like our apps to go fast, but "fast" is a relative term.
+
+No user will perceive a speed difference between web app that lets its HTTP request types flow through the whole codebase, and a hexagonal app that parses transport-layer models into domain representations. But these transformations do have a cost, and if you're working on the kind of project where these costs matter, you already know it's too steep.
+
+If you rely heavily on [zerocopy](https://docs.rs/zerocopy/latest/zerocopy/), if your application shares memory with your network card, if you ever find yourself wondering if rustc is outputting the optimal assembly... my apologies – you don't have the nanoseconds to spare for hexagonal architecture.
+
+### Adopting hexagonal architecture
+
+If you've decided that hexagonal architecture meets your needs, the fifth and final section of this guide will leave you with a wealth of practical Rust recipes. Each one will address a specific problem you might encounter as you adopt hexagonal architecture. I'm so excited to hear what you build.
 
 ## Part V: Advanced hexagonal architecture in Rust
 
-_Part five is coming right after part four!_
+_Part five is coming next!_
 
 ## Exercises
 
