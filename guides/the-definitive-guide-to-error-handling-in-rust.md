@@ -6,7 +6,7 @@ description: Learn to model and handle any error using idiomatic Rust.
 meta_description: Learn to model and handle any error using idomatic Rust.
 color: sky
 tags: [rust, architecture, error handling]
-version: 1.0.1
+version: 1.0.2
 ---
 
 Are you overwhelmed by the amount of choice Rust gives us for handling errors? Confused about when to return a structured error type or a `Box<dyn Error>`? Intimidated by `Box<dyn Error + Send + Sync + 'static>`'s beefy type signature?
@@ -31,9 +31,7 @@ Before we dazzle anyone with our error handling skills, though, let's nail the f
 
 In Rust, an error is any type that implements the `std::error::Error` trait. Here's the definition:
 
-```rust
-// src/core/error.rs
-
+```rust src/core/error.rs
 pub trait Error: Debug + Display {
     // Provided methods
     fn source(&self) -> Option<&(dyn Error + 'static)> { ... } ^1
@@ -257,9 +255,7 @@ If downcasting isn't an ideal way to handle errors, what is it good for? Let's u
 
 The primary Actix error struct, `Error`, has a single field, `cause`, that holds a `Box<dyn ResponseError>`.  
 
-```rust
-// actix-web src/error/error.rs
-
+```rust actix-web src/error/error.rs
 pub struct Error {  
     cause: Box<dyn ResponseError>,  
 }
@@ -267,9 +263,7 @@ pub struct Error {
 
 `ResponseError` is a trait with identical bounds to `std::error::Error`, but specifies methods to return a status code and an HTTP response body:
 
-```rust
-// actix-web src/error/response_error.rs
-
+```rust actix-web src/error/response_error.rs
 pub trait ResponseError: fmt::Debug + fmt::Display {
 	fn status_code(&self) -> StatusCode
 	fn error_response(&self) -> HttpResponse<BoxBody>
@@ -288,8 +282,7 @@ But you know who might care? *The team whose code produced the error*.
 
 If an Actix user converts an error into Actix's opaque error format, they should reasonably expect to be able to get it out again. That's why `actix_web::error::Error` provides the `as_error` method, which downcasts to the user's original error type.
 
-```rust
-// actix-web src/error/error.rs
+```rust actix-web src/error/error.rs
 
 impl Error {
 	pub fn as_error<T: ResponseError + 'static>(&self) -> Option<&T> {  
