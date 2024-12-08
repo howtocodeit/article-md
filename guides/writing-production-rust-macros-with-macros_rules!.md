@@ -6,7 +6,7 @@ description: Learn how experts write real production macros.
 meta_description: Learn how experts write real production Rust macros with macro_rules!
 color: turquoise
 tags: [rust, macros]
-version: 1.0.1
+version: 1.0.2
 ---
 
 This is an intervention.
@@ -447,8 +447,7 @@ Wait. I've said `impl_into_response` matches zero or more idents... but where do
 
 Buckle up.
 
-```rust
-// axum/axum-core/src/response/into_response.rs
+```rust axum/axum-core/src/response/into_response.rs
 all_the_tuples_no_last_special_case!(impl_into_response);
 ```
 
