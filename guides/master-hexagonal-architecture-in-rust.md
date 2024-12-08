@@ -6,7 +6,7 @@ description: Take the pain out of scaling. This guide has everything you need to
 meta_description: Everything you need to write flexible, future-proof Rust applications using hexagonal architecture.
 color: hornet
 tags: [rust, architecture, type-driven design]
-version: 1.1.0
+version: 1.1.1
 ---
 
 Hexagonal Architecture. You've heard the buzzwords. You've wondered, "why hexagons?". You think domain-driven design is involved, somehow. Your company probably says they're using it, but you suspect they're doing it wrong.
@@ -41,9 +41,7 @@ The Very Bad Application is a scaling and maintainability time bomb. It is a mis
 
 Here's my take on `main.rs` for such a program:
 
-```rust
-//! src/bin/server/main.rs
-
+```rust src/bin/server/main.rs
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let config = Config::from_env()?;
@@ -107,9 +105,7 @@ This isn't a leaky abstraction, it's a broken dam.
 
 Take a moment to recover, because I'm about to show you the `create_author` handler, and it's a bloodbath.
 
-```rust
-//! src/lib/routes.rs
-
+```rust src/lib/routes.rs
 pub async fn create_author(
     State(state): State<AppState>,  ^5
     Json(author): Json<CreateAuthorRequestBody>,
@@ -152,8 +148,7 @@ Stay with me! Suppress the urge to vomit. We'll get through this together and co
 
 Look, there's that hard dependency on sqlx `^5`, polluting the system on cue 🙄. And holy good god, our HTTP handler is orchestrating database transactions `^7`. An HTTP handler shouldn't even know what a database _is_, but this one knows SQL!
 
-```rust
-//! src/lib/routes.rs
+```rust src/lib/routes.rs
 
 async fn save_author(tx: &mut Transaction<'_, Sqlite>, name: &str) -> Result<Uuid, sqlx::Error> {
     let id = Uuid::new_v4();
@@ -170,8 +165,7 @@ async fn save_author(tx: &mut Transaction<'_, Sqlite>, name: &str) -> Result<Uui
 
 And the horrifying consequence of this is that the handler also has to understand the specific error type of the database crate – and the database itself `^8`:
 
-```rust
-//! src/lib/routes.rs
+```rust src/lib/routes.rs
 
 const UNIQUE_CONSTRAINT_VIOLATION_CODE: &str = "2067";
 
