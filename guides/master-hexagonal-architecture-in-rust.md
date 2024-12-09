@@ -6,7 +6,7 @@ description: Take the pain out of scaling. This guide has everything you need to
 meta_description: Everything you need to write flexible, future-proof Rust applications using hexagonal architecture.
 color: hornet
 tags: [rust, architecture, type-driven design]
-version: 1.1.2
+version: 1.1.3
 ---
 
 Hexagonal Architecture. You've heard the buzzwords. You've wondered, "why
@@ -271,13 +271,13 @@ changing your mind later will mean a painful refactor. Most of all, look for
 evidence of widespread community adoption and support.
 
 
----info
+@@@info
 `anyhow` is an example of a less grand crate that is nonetheless allowed
 to flow freely through many Rust apps.
 
 Its utility is so general, and its community adoption so extensive, that the
 odds of ever needing to replace it are slim.
----info
+@@@
 
 
 HTTP packages, database clients, message queues, etc. do not fall into this
@@ -315,13 +315,13 @@ Don't worry, though. Before this guide is over, you'll have a complete
 application template you can reuse across all your projects.
 
 
----info
+@@@info
 Really? All of my projects?
 
 You're right to raise an eyebrow. I'm playing fast and loose with the word
 "all", but rest assured that we'll have had a full and frank discussion about
 the most appropriate uses of hexagonal architecture by the time we're done.
----info
+@@@
 
 
 ### The repository pattern in Rust
@@ -331,7 +331,7 @@ making direct queries to an SQL database. This is a plus-sized violation of the
 Single Responsibility Principle.
 
 
----info
+@@@info
 The Single Responsibility Principle
 
 Each unit of a program – from modules to functions to structs – should have at
@@ -340,7 +340,7 @@ most one responsibility.
 There are some specialist use cases where this is impractical to uphold, but
 it's so often correct that I consider it the most useful catchphrase to come out
 of the object-oriented era.
----info
+@@@
 
 
 Code that understands the HTTP request-response cycle shouldn't also understand
@@ -407,7 +407,7 @@ think about SQL or message queues, they just invoke this API, and the underlying
 adapter does all the hard work.
 
 
----info
+@@@info
 Business logic
 
 "Business logic" and "domain logic" are interchangeable terms that I'll be using
@@ -421,7 +421,7 @@ special. Almost every app needs points of contact with the outside world.
 
 Your business logic is how you compose these everyday implementation details and
 make them more than the sum of their parts.
----info
+@@@
 
 
 ### Domain models
@@ -533,7 +533,7 @@ And this has immediate practical benefits:
   be mocked. We'll see this in action shortly.
 
 
----warning
+@@@warning
 Don't be abSerde
 
 Note the absence of `serde::Serialize` and `Deserialize` annotations on the
@@ -554,7 +554,7 @@ won't necessarily result in a tight coupling between domain and adapter.
 If the second point isn't true, however, you give your adapters the power to
 create invalid domain models from raw data, since they can use Serde to bypass
 your constructors.
----warning
+@@@
 
 
 Why do we distinguish `CreateAuthorRequest` `^12` from `Author` `^11`? Surely we
@@ -626,7 +626,7 @@ attempting to create a duplicate author, and unexpected errors that the domain
 doesn't know how to handle.
 
 
----info
+@@@info
 Exhaustive vs. non-exhaustive enums
 
 Since you have full control of the application and all the sites where
@@ -642,7 +642,7 @@ match expressions.
 
 Otherwise, any change to the number or structure of enum variants would be
 breaking, and require amajor version bump.
----info
+@@@
 
 
 Much as our domain would like to pretend the real world doesn't
@@ -730,7 +730,7 @@ aggregation service. `Sqlite::new` simply wraps any sqlx error it encounters
 with some extra context `^15`.
 
 
----info
+@@@info
 Add context to opaque errors
 
 It's good practice to add supporting context to opaque error types
@@ -739,7 +739,7 @@ it called doesn't.
 
 Sometimes, adding more context won't make an error easier to debug. When in
 doubt, however, choose to give too much information over too little.
----info
+@@@
 
 
 Now, the exciting stuff – the implementation of `AuthorRepository`:
@@ -1092,13 +1092,13 @@ The finer points of how you log the underlying cause will vary according to your
 needs. Crucially, however, the error itself is not exposed to the end user.
 
 
----info
+@@@info
 Errors into HTTP responses
 
 `ApiError` itself is transformed into an HTTP response with a JSON body by the
 axum `IntoResponse` trait. That's an axum implementation detail, though, and I
 don't want to get bogged down in that here.
----info
+@@@
 
 
 Finally, our success case `^25`. We take a reference to the returned `Author`
@@ -1182,7 +1182,7 @@ The mock implementation of `create_author` then deals with swapping a dummy
 value with the real result in order to return it to the test caller.
 
 
----info
+@@@info
 Mockall
 
 Some people like to craft mocks by hand. Personally, I don't think there are
@@ -1193,7 +1193,7 @@ life-saving `automock` macro to accelerate the process of mocking.
 
 It also provides argument matching, call counts, and everything else you'd
 expect from a featureful mocking crate.
----info
+@@@
 
 
 Here's the test for the case where the repository call succeeds. I leave the
@@ -1287,7 +1287,7 @@ adapter, you have to rewrite domain code that has nothing to do with the adapter
 implementation.
 
 
----info
+@@@info
 Is this a plausible scenario?
 
 Reader TmLev raised an important point in the comments: how likely is it that
@@ -1297,7 +1297,7 @@ I've participated in at least two of these switches each year since I joined the
 industry.
 
 In fact, I got the data model for the _How To Code It_ CMS wrong on my first
-attempt, and I'm currently rebuilding it 🙃.
+attempt, and had to rebuild it 🙃.
 
 It's not fun, but because my front end separates the domain representation of an
 article from the JSON output of the CMS, it's not _hell_, and there's no
@@ -1309,7 +1309,8 @@ often.
 
 How often these occur is a function of both scale and growth rate. We'll tackle
 these topics in depth in [Part IV](#trade-offs-of-hexagonal-architecture-in-rust).
----info
+@@@
+
 
 So, domain logic can't go in our HTTP handler, and it can't go in our
 `AuthorRepository`. Where does it live?
@@ -1360,7 +1361,7 @@ a time-series database. `AuthorNotifier` `^35` triggers notifications to
 authors.
 
 
----warning
+@@@warning
 Finding the right abstraction
 
 `AuthorNotifier` declares that the domain doesn't care about the medium used to
@@ -1374,7 +1375,7 @@ would be pointless.
 
 For others, code coordinating notifications will be complex enough to warrant
 its own domain.
----warning
+@@@
 
 
 Rather than stuffing these domain dependencies into `AppState` directly, we're
@@ -1624,7 +1625,7 @@ The adapters are the bouncers enforcing the domain's dress code on anything from
 the outside that wants to get in.
 
 
----info
+@@@info
 Use cases
 
 In other writing on hexagonal architecture, you'll often see the terminology
@@ -1638,7 +1639,7 @@ Personally, I don't use this term. I find it to be jargon that complicates an
 already complex architecture.
 
 If it appeals to you, don't let me stop you!
----info
+@@@
 
 
 ### How to choose the right domain boundaries
@@ -1656,7 +1657,7 @@ heavily on variables like your scale, your overall system architecture and your
 requirements around synchronicity.
 
 
----info
+@@@info
 Further reading on domain-driven design
 
 There are many books on the complex topic of domain-driven design, and I'd do it
@@ -1673,7 +1674,7 @@ most technical:
 - [Learning Domain-Driven Design](https://www.amazon.com/Learning-Domain-Driven-Design-Aligning-Architecture/dp/1098100131)
 - [Implementing Domain-Driven Design](https://www.amazon.com/gp/product/0321834577/)
 - [Domain-Driven Design](https://www.amazon.com/Domain-Driven-Design-Tackling-Complexity-Software/dp/0321125215/)
----info
+@@@info
 
 
 The good news is, I have two powerful rules of thumb to help you make the right
@@ -1687,10 +1688,10 @@ I've been discussing an "author domain", because a using single-entity domain
 makes it easier to teach the concepts of hexagonal architecture.
 
 
----info
+@@@info
 An "entity" is a domain-driven design term for a uniquely identifiable object,
 like an `Author`.
----info
+@@@
 
 
 For a small blogging app, however, it's likely that a single "blog domain" would
@@ -1712,7 +1713,7 @@ of a single, atomic operation.
 > single, atomic operation.
 
 
----warning
+@@@warning
 On atomicity
 
 When I hear the word "atomic", my brain jumps straight to "transactions" in the
@@ -1723,7 +1724,7 @@ doesn't care about repository implementation details.
 
 Atomicity at the service level is the domain saying "I don't care how you do it,
 but these changes must appear to happen at the same time".
----warning
+@@@
 
 
 Consider our blogging app. The author domain manages the lifecycle of an
@@ -1756,7 +1757,7 @@ same domain.
 > operations atomically, your domain boundaries are wrong.
 
 
----warning
+@@@warning
 Entities vs. records
 
 An entity is a uniquely identifiable object described by your business logic,
@@ -1774,7 +1775,7 @@ this data across many tables.
 Further, different domains may share the same underlying data source, but
 interpret it differently. A billing domain `Customer` type might also need user
 data, but details about authorship aren't relevant.
----warning
+@@@
 
 
 #### Start with large domains
@@ -2039,7 +2040,7 @@ scaling_.
 > It's not just an architecture _of_ scale, it's an architecture _for scaling_.
 
 
----warning
+@@@warning
 "Founders don't have time for tests"
 
 There's a common sentiment that writing tests is incompatible with launching a
@@ -2060,7 +2061,7 @@ to scale, the benefits of hexagonal coding compound.
 \*_As of November 2024, I find I'm most productive using
 [Cursor](https://www.cursor.com/) hooked up to [Claude 3.5
 Sonnet](https://www.anthropic.com/news/claude-3-5-sonnet)._
----warning
+@@@
 
 
 Hexagonal architecture also saves you from true folly – launching your product
@@ -2095,10 +2096,10 @@ This is what go-live looks like with microservices. All the pain of incorrect
 domain boundaries, now with network hops.
 
 
----info
+@@@info
 \*There exists no language in which His dark name can be pronounced. The closest
 known representation in English rhymes with "works on my machine".
----info
+@@@
 
 
 By starting with a coarse-grained hexagonal monolith, you can refine your domain
