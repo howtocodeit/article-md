@@ -1,12 +1,12 @@
 ---
-title: Rust ownership explained: merging linked lists
-meta_title: Rust Ownership Explained: Merging Linked Lists
+title: "Rust ownership explained: merging linked lists"
+meta_title: "Rust Ownership Explained: Merging Linked Lists"
 slug: rust-ownership-explained-merging-linked-lists
 description: How a "simple" linked list coding challenge helps explain Rust's ownership model.
 meta_description: How a "simple" linked list coding challenge helps explain Rust's ownership model.
 color: orange
 tags: [rust, ownership, data structures, algorithms]
-version: 1.0.0
+version: 1.0.1
 ---
 
 "Angus", you say, "you promised us practical, better-than-production Rust. You're not about to walk through a LeetCode question, are you?".
@@ -134,11 +134,13 @@ error[E0382]: use of moved value: `pre_head`
  
 ```
 
+
 ---info
 Once you've written enough Rust, working in languages without ownership semantics starts to feel uncomfortable. 
 
 You worry you might be breaking the law, or that the borrow checker will jump out from behind a bin and shank you.
----
+---info
+
 
 The moment we assign `pre_head` to `tail` `^2`, it's over. We've given away ownership of `pre_head`, and have nothing to return at `^7`.
 
@@ -158,11 +160,12 @@ Let's stop this nonsense. You understand the challenge that Rust's ownership mod
 
 The correct solution reminds us to be alert to problems that can be solved without reaching for heavy-duty tools like `Rc` and `RefCell`, which both have runtime overhead.
 
+
 ---warning
 `RefCell` in particular should be chosen as a last resort, because it shifts borrow checking from compile time to runtime. 
 
 I prefer a program that won't compile when I'm inevitably wrong about lifetimes.
----
+---warning
 
 Overuse of these types is a telltale sign of an inexperienced Rust developer. Often, being smart with references and swaps achieves the desired result in a way that can be checked statically.
 
@@ -215,9 +218,11 @@ We want to avoid owning a node at all costs, so to perform the comparison betwee
 
 We unwrap the `Option<&Box<ListNode>>` (which is guaranteed to be `Some` thanks to the loop condition), and compare their `val` fields through references.
 
+
 ---info
 `PartialOrd::partial_cmp` (which provides the implementation for the comparison operators `<`, `>`, etc.) also takes `&self`. Again, no ownership required.
----
+---info
+
 
 The *reference* to the lesser of the two nodes is assigned to `input_head`, which represents the node that we want to append to our output list. At this point, `input_head` is either a mutable reference to the head of `list1`, or a mutable reference to the head of `list2`.
 
@@ -247,6 +252,7 @@ Thanks to our swaps, we know that `next_tail_next` is `None`, and that this is t
 
 By doing this, we also guarantee that `next_tail` will always point to `None` at the top of the loop, and that the final node in the output list will correctly point its `next` field to `None`.
 
+
 ---warning
 Setting `*next_tail = None` wouldn't work.
 
@@ -255,7 +261,8 @@ It's critical to remember that `next_tail` is not "the next node" but "the place
 `*next_tail = None` would cause the node we just put there to be dropped. The next iteration of the loop would be the next node in the exact same place, which would again be dropped, leading to a final output list of `None`.
 
 We have to advance `next_tail` to point to the place where the next node belongs.
----
+---warning
+
 
 Once one of the lists is exhausted, we just whack the remaining list onto the end of the output `^15`. It's safe to assign directly to `*next_tail` here, because we advanced `next_tail` at the end of the final loop iteration.
 
