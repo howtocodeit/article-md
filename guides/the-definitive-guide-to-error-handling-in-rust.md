@@ -6,7 +6,7 @@ description: Learn to model and handle any error using idiomatic Rust.
 meta_description: Learn to model and handle any error using idomatic Rust.
 color: sky
 tags: [rust, architecture, error handling]
-version: 1.0.3
+version: 1.0.4
 ---
 
 Are you overwhelmed by the amount of choice Rust gives us for handling errors? Confused about when to return a structured error type or a `Box<dyn Error>`? Intimidated by `Box<dyn Error + Send + Sync + 'static>`'s beefy type signature?
@@ -50,13 +50,13 @@ In fact, `Error::cause` and `description` are deprecated in favor of `Error::sou
 `Error::provide` is part of [an experimental nightly build](https://github.com/rust-lang/rust/issues/99301), so I won't discuss it here. You won't have to worry about it unless you're working with cutting-edge, unstable code.
 
 
----warning
+@@@warning
 `Error::source`
 
 Watch out for the default implementation of `Error::source`. It returns `None`.
 
 If you want a custom error type to return the original error that caused it, you need to provide your own implementation.
----warning
+@@@
 
 
 The return type of `Error::source` warrants closer examination `^1`, because we'll see similar types throughout this guide.
@@ -64,7 +64,7 @@ The return type of `Error::source` warrants closer examination `^1`, because we'
 You know what `Option` is already. `&(dyn Error + 'static)` simply means "a reference to some error that may live for the whole duration of the program".
 
 
----info
+@@@info
 Umm, technically... 🙋‍♂️
 
 I frequently refer to types with the `'static` lifetime as being "static". This is convenient shorthand, but subtly incorrect.
@@ -74,7 +74,7 @@ They're not static in the sense of a `static` variable. They have the `'static` 
 If the compiler determines that `'static` objects don't _need_ to live as long as the program, it's free to drop them sooner.
 
 Please justify my sloppiness by making sure you're clear on the distinction.
----info
+@@@
 
 
 The `'static` lifetime is important for error handling, because errors are often handled long after the code that causes them returns, sometimes on a different thread. 
@@ -90,9 +90,9 @@ In general, standard library code places more relaxed bounds on dynamic errors t
 This allows the widest variety of things to behave as errors, with stricter requirements left to the user's discretion.
 
 
----warning
+@@@warning
 `Error::source` returns a *non*-static reference to a static `Error`.
----warning
+@@@
 
 
 How do we make an `Error` type static? Simple – use only owned fields, or fields which specify the `'static` lifetime for references and trait objects.
@@ -179,7 +179,7 @@ I work on an astrodynamics library for a space mission simulator funded by the E
 Now, we don't actually do this – that's a story for Part III on structured errors – but it is a valid Rust error handling strategy.
 
 
----warning
+@@@warning
 Boxed errors aren't errors
 
 Remember when I told you to be unsurprising and put only types that implement `Error` into `Result::Err`?
@@ -189,7 +189,7 @@ Well, surprise! `Box<dyn Error>` doesn't implement `Error` 🙄.
 You need to wrap `Box<dyn Error>` in a newtype that _does_ implement `Error` to get this functionality. My [*Ultimate Guide to Rust Newtypes*](https://www.howtocodeit.com/articles/master-hexagonal-architecture-rust) has got you covered.
 
 Alternatively, you can use a library like [anyhow](https://docs.rs/anyhow/latest/anyhow/) which provides such a type for you. We'll discuss this shortly.
----warning
+@@@
 
 
 #### Handling dynamic errors from other people's code
@@ -213,9 +213,9 @@ Did you know that you can get a concrete error type back out of a boxed `dyn Err
 I'm not going to get into _how_ the `std::error` crate does this, because it involves some scary `unsafe` code that has nothing to do with handling errors. That won't stop us from using it.
 
 
----info
+@@@info
 If you'd like me to walk through the `std::error` internals, leave a comment and I'll write it!
----info
+@@@
 
 
 `dyn Error` trait objects have three methods for attempting a transformation into some concrete type `T`:
@@ -227,11 +227,11 @@ pub fn downcast_ref<T: Error + 'static>(&self) -> Option<&T>
 ```
 
 
----warning
+@@@warning
 Do you see it? The underlying error type must be `'static`, or you can't downcast to it. This is one more reason why it's good practice to design only `'static` error types.
 
 Note also that the `Box<Self>` inside the `Result::Err` returned by `downcast` doesn't implement `Error`, but `Self` does. This is one of the cases where returning a non-`Error` inside `Result::Err` makes sense.
----warning
+@@@
 
 If the `dyn Error` is of type `T`, you'll get a `T` for closer inspection. Whether that `T` is owned or borrowed depends on which method you call.
 
@@ -292,11 +292,11 @@ impl Error {
 ```
 
 
----info
+@@@info
 The implementation of `ResponseError::downcast_ref` is specific to Actix. It's not the same as `<dyn std::error::Error>::downcast_ref` – these are methods of distinct trait objects. However, the concept is the same.
 
 (If you're confused by the `<dyn Trait>::method` syntax, it means that the method is defined on the dynamic trait object type, and not as part of the trait itself.)
----info
+@@@info
 
 
 There are no leaky abstractions here, because the caller of `as_error` also owns the code that created the error in the first place.
@@ -304,13 +304,13 @@ There are no leaky abstractions here, because the caller of `as_error` also owns
 Actix never calls `downcast_ref` itself. It doesn't use `downcast_ref` to handle errors. Rather, it provides `as_error` as a means for external parties using Actix's wrapper type to inspect their own implementation details.
 
 
----info
+@@@info
 `downcast_ref` in tests
 
 Ok, Actix _does_ call `downcast_ref`, but only in tests.
 
 Tests are one of the few scenarios where you *should* care that some dynamic error you're returning has a specific underlying type.
----info
+@@@
 
 
 ### Handling Rust errors with anyhow
@@ -330,9 +330,9 @@ I use anyhow often, and I find it's a better fit for applications than libraries
 If you return a concrete `anyhow::Error` across a crate boundary, you force the caller to depend directly on anyhow, and not everyone will want to.
 
 
----warning
+@@@warning
 Also, if you make anyhow part of your public interface, you can't upgrade to new major versions of anyhow without bumping the major version of your own crate.
----warning
+@@@
 
 
 As a general rule, return only your own or standard library error types across crate boundaries to minimize leakage of your implementation details into other people's code.
