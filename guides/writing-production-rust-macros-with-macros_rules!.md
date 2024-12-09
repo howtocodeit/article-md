@@ -6,7 +6,7 @@ description: Learn how experts write real production macros.
 meta_description: Learn how experts write real production Rust macros with macro_rules!
 color: turquoise
 tags: [rust, macros]
-version: 1.0.2
+version: 1.0.3
 ---
 
 This is an intervention.
@@ -65,7 +65,7 @@ Light reading
 Do you regularly read standard library code? I highly recommend it.
 
 Not only does it teach you about the kind and quality of code underpinning a mainstream language, but a strong understanding of stdlib internals makes debugging almost _any_ Rust easier.
----
+---info
 
 `assert_eq!` supports two argument patterns. The first matches two expressions, `a, b`, and compares their values for equality. The second also takes a format string and an arbitrary number of arguments to interpolate.
 
@@ -91,7 +91,7 @@ Rule `^2` matches the same two expressions, but also matches one or more `TokenT
 TokenTree
 
 Either a single Rust token, like `3` or `"hello"`, or any number of nested tokens contained by `()`, `[]` or `{}`.
----
+---info
 
 
 Their expansions are almost identical:
@@ -213,7 +213,7 @@ macro_rules! format_args {
 `assert_eq!` args must be `Debug`
 
 If you've ever wondered where the requirement that arguments to `assert_eq!` must be `Debug` comes from, wonder no more. It's a bound on `core::panicking::assert_failed` `^9`.
----
+---info
 
 
 `assert_eq!` doesn't do very much, does it? It surely won't be going to Hogwarts.
@@ -322,7 +322,7 @@ This is a discussion about macros, not axum, so the definition of `IntoResponseP
 I know, I know – you're addicted to Rust. It's causing problems at home. You need your fix.
 
 [Here are the docs](https://docs.rs/axum/latest/axum/response/trait.IntoResponseParts.html) on `IntoResponseParts`. Just... don't tell anyone where you got them, ok?
----
+---info
 
 Remember how `assert_eq!` disguised the fact that both rules called the same underlying function – `assert_failed` – with different arguments? Each of the `impl_into_response!` implementations does something similar.
 
@@ -460,7 +460,7 @@ Yes, my friend, we've got macros within macros. `all_the_tuples_no_last_special_
 What's the "last special case"?
 
 Special it may be, but it's not part of our macro discussion. Here's the [source](https://github.com/tokio-rs/axum/blob/51bb82bb2d317f67edf9e07bd8ff5c603e92b824/axum-core/src/macros.rs#L226).
----
+---info
 
 
 How is `all_the_tuples_no_last_special_case!` defined?
@@ -509,7 +509,7 @@ Are you ready to impress your friends at dinner parties?*
 
 ---warning
 \*Assuming your friends are Rustaceans. If not, keep this to yourself, or you may be asked to leave.
----
+---warning
 
  
 Once you wrap your head around this next one, no macro will stand in your way.
@@ -603,7 +603,7 @@ It feels like we've taken the head off the list of async expressions and placed 
 
 ---info
 The technical term for this macro design pattern is an "incremental `tt` muncher". Delicious.
----
+---info
 
 
 This process is the same reductive pattern used by `assert_eq!` and `impl_into_response` – on steroids.
@@ -689,7 +689,7 @@ Although you can use symbols other than `@` to denote an internal rule, `@` is a
 At present, no other Rust syntax uses `@` in prefix position, so it won't be treated specially by the compiler.
 
 To learn more about internal rules, check out Daniel Keep's [_Little Book of Rust Macros_](https://danielkeep.github.io/tlborm/book/pat-internal-rules.html).
----
+---info
 
 
 ### Counting with `macro_rules!`
@@ -803,7 +803,7 @@ Recursive counting
 Macros are limited to 128 recursions by default, so this approach is unsuitable for counting large collections.
 
 Try [the exercises](#exercises) to explore alternative ways of counting with macros.
----
+---warning
 
 
 ## Rust macros rule
