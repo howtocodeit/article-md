@@ -6,7 +6,7 @@ description: Clean up your code, clarify business logic and improve test coverag
 meta_description: Clean up your code, clarify business logic and improve test coverage with Rust's newtype wrappers.
 color: peony
 tags: [rust, newtypes, type-driven design]
-version: 1.0.10
+version: 1.0.11
 ---
 
 # The Ultimate Guide to Rust Newtypes
@@ -17,7 +17,7 @@ You've read [The Book](https://doc.rust-lang.org/book/), so I'm sure you've hear
 
 But if reading The Book is your only exposure to newtypes, you might think that they're only useful for getting around the Orphan Rule. Think again.
 
----info
+@@@info
 The Orphan Rule
 
 ## You can implement a trait for a type only if either the trait or the type is defined in your crate.
@@ -91,7 +91,7 @@ pub enum CreateUserError {
 }
 ```
 
----info
+@@@info
 `thiserror`
 
 When you see `#[derive(Error)]` `^4`, you're usually watching the [`thiserror` crate](https://docs.rs/thiserror/latest/thiserror/) in action. `thiserror` is a powerful library for quickly creating expressive error types, and I highly recommend it.
@@ -196,7 +196,7 @@ I'm glad you asked.
 
 Instead of running validations on data that may or may not be valid when it's already inside the core of your application, require your business logic to accept only data that has been parsed into an acceptable representation.
 
----info
+@@@info
 "Parse, don't validate"
 
 ## This phrase was made famous in software engineering circles by [Alexis King's blog post](https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/) of the same name. It's one of the all-time great pieces of writing on type-driven design.
@@ -235,7 +235,7 @@ fn create_user(email: EmailAddress, password: Password) -> Result<User, UserAlre
 
 This is very exciting. In order to get hold of an `EmailAddress`, a raw string _must_ pass the validation performed in the `EmailAddress::new` constructor. That means that any email address passed to `create_user` _must_ be valid, so `create_user` no longer needs to check – it's all business logic, baby! `^10`
 
----warning
+@@@warning
 Email address validation
 
 You may be surprised by what counts as a valid email address. Take this Lovecraftian nightmare: `@1st.relay,@2nd.relay:user@final.domain`.
@@ -279,7 +279,7 @@ mod create_user_tests {
 
 Do you see how we're getting extraordinary value from a small shift in mindset? We're using Rust's remarkable type system to do a lot of heavy lifting for us. If an instance of a newtype exists, we know that it's valid.
 
----info
+@@@info
 If you're especially perceptive, you may have spotted something off about our definition of `create_user` and our desire to test whether a user already exists.
 
 Checking that a user exists requires a database lookup but, for the sake of simplifying my examples, `create_user` doesn't allow for a mock database to be injected during test.
@@ -329,7 +329,7 @@ pub struct EmailAddress(String);
 
 `String` also implements `Default`, but a "default email address" doesn't make much sense, so we don't derive it. And, since `String` isn't `Copy`, neither is `EmailAddress`.
 
----info
+@@@info
 Build the habit
 
 Deriving these standard traits for _any_ type where they make sense is a good habit to develop – even if you don't immediately see a use for them.
@@ -348,7 +348,7 @@ impl Display for EmailAddress {
 }
 ```
 
----info
+@@@info
 Implementing `Display` gets us a free implementation of `std::string::ToString`. 🎉
 
 ---
@@ -464,7 +464,7 @@ For instance, it's valid to have two constructors `Subsecond::default()` and `Su
 
 > Define conversion traits in terms of a canonical constructor.
 
----info
+@@@info
 What's up with `FromStr`?
 
 Newcomers to Rust are often confused by the existence of `FromStr`, which is identical to `TryFrom<&str>` for most practical purposes.
@@ -502,7 +502,7 @@ impl EmailAddress {
 }
 ```
 
----info
+@@@info
 Naming conventions
 
 ## Confused about when to name your methods `to_x`, `into_x` and `as_x`? [The Rust API guidelines](https://rust-lang.github.io/api-guidelines/naming.html#ad-hoc-conversions-follow-as_-to_-into_-conventions-c-conv) have got you covered.
@@ -570,7 +570,7 @@ Deref coercion also gives us all the `&self` methods of `str` on `EmailAddress` 
 
 Finally, it causes `*email` to desugar to `*Deref::deref(&email)` `^21`.
 
----warning
+@@@warning
 Careful! `*email` is _not_ equivalent to `Deref::deref(&email)`, which is a source of confusion for people who expect the dereference operator `*` to return the return type of the `deref` implementation, which in our case would be `&str`.
 
 ## `*` dereferences all the way down to memory bedrock – `str`.
@@ -585,7 +585,7 @@ This decision is critical if your newtype wraps a user-controlled type generical
 
 The best advice I've seen on this issue comes from [Rust for Rustaceans](https://rust-for-rustaceans.com/) (an essential read): prefer associated functions to inherent methods on generic wrapper types.
 
----info
+@@@info
 Inherent methods
 
 ## An [inherent method](https://doc.rust-lang.org/reference/items/implementations.html#inherent-implementations) of type `T` is any method defined in a standard `impl T` block. Remember, methods have a `self` or `&self` receiver (or their `mut` variants). Functions don't.
@@ -642,7 +642,7 @@ Luckily, `SmartBox` believes that all views should be heard – even the ones t
 
 ### `Borrow`
 
----warning
+@@@warning
 If you're looking for a way to shoot yourself in the foot with safe Rust, the `Borrow` trait is a great option.
 
 ---
@@ -836,7 +836,7 @@ pub fn demonstrate() {
 
 As you can see, practically _everything_ we've been doing manually up to this point can be generated by `nutype`. It's a huge time saver.
 
----info
+@@@info
 `nutype`'s support for `new_unchecked` generation and `regex` validation lies behind their respective feature flags. You can add them with `cargo add nutype --features new_unchecked regex`.
 
 ---
@@ -849,7 +849,7 @@ EmailAddress violated the regular expression.
 
 This hampers debugging and puts the onus on the caller to wrap the newtype's associated error with additional context. It's good practice to do so regardless, but this omission feels out of place in Rust – just think about how good Rust's compiler error messages are.
 
----warning
+@@@warning
 Unlike `derive_more`, using `nutype` is a commitment. By adopting its santizers, validations and error types, you will find it quickly becomes a hard dependency that pervades your codebase and is tough to migrate away from.
 
 ## This might be fine for you, but take your time and think about how `nutype` will work for your particular application and organization before adopting it.
