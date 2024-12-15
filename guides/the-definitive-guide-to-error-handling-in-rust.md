@@ -354,4 +354,570 @@ When we understand both of these error handling styles, we'll bring them togethe
 
 ## Structured error handling in Rust
 
-_Part III is coming soon._
+### Sane APIs support programmatic error handling
+
+Knock knock. It's Hyrum's Law.
+
+
+@@@info
+[Hyrum's Law](https://www.hyrumslaw.com/)
+
+"With a sufficient number of users of an API, it does not matter what you promise in the contract: all observable behaviors of your system will be depended on by somebody."
+@@@info
+
+
+In other words, someone, somewhere _will_ end up depending on your error messages. You might not say these messages are part of your public API, but the public has access to them, and if they've got no better way to handle your errors, they're going to `if`-`else` your strings.
+
+Changing an error message in the popular library you maintain is going to fuck someone up – and they will end up at your door. Knock knock.
+
+If you're thinking that this is a low-impact edge-case, consider that error strings from deep within the Go standard library are depended on by programs of real consequence.
+
+Here's a sample from Go's `http` package:
+
+```go go src/net/http/request.go
+// MaxBytesError is returned by [MaxBytesReader] when its read limit is exceeded.
+type MaxBytesError struct {
+	Limit int64
+}
+
+func (e *MaxBytesError) Error() string {
+	// Due to Hyrum's law, this text cannot be changed. ^3
+	return "http: request body too large"
+}
+```
+
+I didn't write the comment at `^3`. One of the Go team did. Good thing, too, because [here's Grafana depending on it](https://grep.app/search?q=http%3A%20request%20body%20too%20large&filter[lang][0]=Go).
+
+
+@@@info
+Credit goes to Abenezer Belachew for finding these examples, and [his fascinating write-up](https://abenezer.org/blog/hyrum-law-in-golang) on Hyrum's Law in Go.
+@@@info
+
+
+I'm calling out Go because it was famously unergonomic to discern whether a specific type of error was present in a long chain of errors. [Things improved](https://pkg.go.dev/errors#As) in Go 1.13, but Hyrum's Law had already had its way with the Go codebase.
+
+In fact, `MaxBytesError` was only [added to Go's public API](https://github.com/golang/go/commit/a5d61be040ed20b5774bff1b6b578c6d393ab332) in 2022, replacing the anonymous error that forced Grafana and others to depend on the error string. The message it outputs can't change without breaking their code.
+
+Shouldn't they have known better than to depend on an undocumented implementation detail? Are they software engineers or kindergarteners?
+
+Kids need _structure_, and Go didn't give them any. There was no stable way to identify this error.
+
+This is precisely why you should [avoid forcing callers to downcast](#avoid-forcing-callers-to-downcast) your Rust errors. Whenever there's the slightest possibility that someone might want to react to your error programmatically, a dynamic error type won't do.
+
+Luckily, Rust makes it simple to build strong, beautiful errors into our API contracts.
+
+### Build expressive Rust errors with enums
+
+Consider a simple, Gregorian `Date` type:
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Date {
+    year: i32,
+    month: u8,
+    day: u8,
+}
+
+impl Date {
+	pub fn new(year: i32, month: u8, day: u8) -> Result<Self, ???> { ^4
+		todo!()
+	}
+}
+```
+
+When deciding what type of error to return `^4`, start by listing all the ways someone might lose their mind when calling your function. In our case:
+
+- The month may be outside the range `1..=12`.
+- The day may be zero, or greater than the number of days in the given month.
+- The caller requests February 29th on a non-leap year.
+
+Expressing the constructor return type as `Result<Self, Box<dyn Error>>` is convenient – just box a string explaining the problem. Convenient, that is, until Hyrum wants his pound of flesh. We can't change these strings because we've forced people to depend on them.
+
+> Codify all possible error states in your public API.
+
+In Rust, our weapon of choice is the `enum`:
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DateError {
+    InvalidMonth(u8),
+    InvalidDay { month: u8, day: u8 },
+    NonLeapYear(i32),
+}
+
+impl Display for DateError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        use DateError::*;
+        match self {
+            InvalidMonth(month) => write!(f, "{} is not a valid month", month),
+            InvalidDay{ month, day } => {
+                write!(f, "{} is not a valid day for month {}", day, month)
+            },
+            NonLeapYear(year) => write!(f, "{} is not a leap year", year),
+        }
+    }
+}
+
+impl Error for DateError {}
+```
+
+`DateError` gives us two massive benefits:
+
+1. The entire universe of errors that the caller needs to handle is obvious from the function signature. There's no need to dig through the `Date` constructor call chain to figure out what errors it might return. This is a key shortcoming with dynamic errors or, God forbid, exceptions in other languages.
+2. It encodes our list of problem states in a way that callers can respond to programmatically. They match each variant of interest to act on the cause, supported by structured data describing the invalid fields.
+
+`DateError`'s variants are a documented part of our public API. Adding or removing variants or their fields are still breaking changes, but, unlike string error messages, they're governed by an explicit contract between us and our users.
+
+If your users still choose to depend on your messages rather than your enum variants, that's very much a _them_ problem, not a _you_ problem, which is the best kind of problem.
+
+> Good library developers give users recipes for perfection. Some people can't cook.
+
+### Composing structured error types
+
+So far, so simple. But in real-life code, fallible functions call other fallible functions, and each failure may be represented by a different error type. We need to compose these errors into a single return type.
+
+
+@@@warning
+Umbrella errors
+
+Some crates and modules choose to compose every error their code produces into a single public error type. `std::io::Error` is the most prominent example (you'll hear more about it later).
+
+I strongly discourage you from doing this if many different things can go wrong when calling your code.
+
+If your module exposes 10 functions that fail in different ways, don't be tempted to define:
+
+```rust
+pub enum Error {
+	Fn1Error,
+	Fn2Error,
+	// ...,
+	Fn10Error,
+}
+
+pub fn fn1() -> Result<(), Error> {}
+pub fn fn2() -> Result<(), Error> {}
+// ...
+pub fn fn10() -> Result<(), Error> {}
+```
+
+For each function call that results in an error, callers would have to filter out the noise of nine, unrelated error cases.
+
+As we'll soon see, you can't always eliminate noise completely, but our aim is to design error types that prioritize _relevant_ information.
+@@@warning
+
+
+Let's extend our budding time library with a new struct and a corresponding error:
+
+```rust
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+struct UtcTimestamp {
+    hour: u8,
+    minute: u8,
+    second: u8,
+}
+
+impl UtcTimestamp {
+    pub fn new(hour: u8, minute: u8, second: u8)
+    -> Result<UtcTimestamp, UtcTimestampError> {
+        todo!()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UtcTimestampError {
+    InvalidHour(u8),
+    InvalidMinute(u8),
+    InvalidSecond(u8),
+    InvalidLeapSecond { hour: u8, minute: u8, second: u8 },
+}
+
+impl Display for UtcTimestampError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        use UtcTimestampError::*;
+        match self {
+            InvalidHour(hour) => write!(f, "{} is not a valid hour", hour),
+            InvalidMinute(minute) => {
+                write!(f, "{} is not a valid minute", minute)
+            }
+            InvalidSecond(second) => {
+                write!(f, "{} is not a valid second", second)
+            }
+            InvalidLeapSecond {
+                hour,
+                minute,
+                second,
+            } => write!(
+                f,
+                "{}:{}:{} is not a valid leap second",
+                hour, minute, second
+            ),
+        }
+    }
+}
+
+impl Error for UtcTimestampError {}
+```
+
+The `UtcTimestampError` variants for hour-, minute- and second-related errors are obvious. However, the International Earth Rotation and Reference Systems Service (IERS – they hold the best parties) occasionally adds [leap seconds](https://en.wikipedia.org/wiki/Leap_second) to keep UTC in sync with the rotation of the Earth.
+
+This is why – and I say this as an author of an astronomical time library – UTC is the Devil's Timescale.
+
+Leap seconds always occur at `23:59:60`. If we have a `second` field of `60`, and `hour` and `minute` fields that aren't `23` and `59`, respectively, someone's messed up. We capture this with `UtcTimestampError::InvalidLeapSecond`.
+
+Now, leap seconds don't happen every year, praise be to IERS. And they only occur in June or December. So when we define a `UtcDateTime` time, we need to account for three things:
+
+1. `DateError`s.
+2. `UtcTimestampError`s.
+3. Leap seconds with valid timestamps, but which fall on a year or month in which there was no leap second.
+
+How do we compose three errors that occur in the course of a single function call? That's right – with another enum.
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+struct UtcDateTime {
+    date: Date,
+    time: UtcTimestamp,
+}
+
+impl UtcDateTime {
+    fn new(year: i32, month: u8, day: u8, hour: u8, minute: u8)
+    -> Result<Self, UtcDateTimeError> {
+        todo!()
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UtcDateTimeError {
+    Date(DateError),
+    Time(UtcTimestampError),
+    InvalidLeapSecond(Date),
+}
+
+impl Display for UtcDateTimeError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        use UtcDateTimeError::*;
+        match self {
+            Date(err) => write!(f, "invalid date: {}", err),
+            Time(err) => write!(f, "invalid time: {}", err),
+            InvalidLeapSecond(date) => {
+                write!(f, "no leap second occurs on {}", date)
+            },
+        }
+    }
+}
+
+impl Error for UtcDateTimeError {}
+```
+
+`DateError` and `UtcTimestampError` are thinly wrapped in `UtcDateTime`-specific equivalents. Their messages carry a little more context for human readers.
+
+Having access to both a date and a time, the `UtcDateTime` constructor can also validate whether a leap second timestamp falls on a leap second date. `UtcDateTimeError::InvalidLeapSecond` is a new variant specific to the compound struct.
+
+Ok, next question: what error type should this alternative `UtcDateTime` constructor return?
+
+```rust
+impl UtcDateTime {
+    fn from_date_and_time(date: Date, time: UtcTimestamp)
+    -> Result<Self, ???> {
+        todo!()
+    }
+}
+```
+
+With the onus on the caller to construct valid `Date`s and `UtcTimestamp`s and handle their errors, the constructor's error space shrinks to just `InvalidLeapSecond`, which could plausibly become its own `struct` error type.
+
+What's the proper way to support _both_ constructors? This?
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct InvalidLeapSecondDateError(Date);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UtcDateTimeError {
+    Date(DateError),
+    Time(UtcTimestampError),
+    InvalidLeapSecond(InvalidLeapSecondDateError),
+}
+
+// Error implementations omitted
+
+impl UtcDateTime {
+    fn new(year: i32, month: u8, day: u8, hour: u8, minute: u8)
+    -> Result<Self, UtcDateTimeError> {
+        todo!()
+    }
+    
+    fn from_date_and_time(date: Date, time: UtcTimestamp)
+    -> Result<Self, InvalidLeapSecondDateError> {
+        todo!()
+    }
+}
+```
+
+_Maybe_.
+
+This approach succeeds in giving the caller only the most relevant information about the issue, at a cost to you, the developer. All this nesting creates a lot of code. We want to [avoid module-scale umbrella errors](#umbrella-errors), but while a bespoke error per domain type is one thing, you may think that a bespoke error per _function_ is excessive.
+
+Ultimately, you decide whether it's reasonable for your users to handle unrelated error variants. Trust me, they'll let you know if not. Stick to our rule of thumb and you'll be fine:
+
+>  Design error types that prioritize _relevant_ information. Minimize unrelated noise.
+
+### How to improve the ergonomics of your Rust errors
+
+Manually implementing errors is boilerplatey. In this section, we'll remove that barrier to implementing robust error types for every occasion.
+#### thiserror
+
+A titan among error handling crates, [thiserror](https://docs.rs/thiserror/latest/thiserror/) dramatically simplifies the process of defining and constructing situational error types.
+
+It's the order to anyhow's dynamic chaos. Perfectly balanced, as all things should be.
+
+Let's reimplement `UtcDateTimeError` with thiserror:
+
+```rust
+#[derive(thiserror::Error, Debug, Clone, Copy, PartialEq, Eq)] ^5
+pub enum UtcDateTimeError {
+    #[error(transparent)] ^6
+    Date(#[from] DateError), ^7
+    #[error(transparent)]
+    Time(#[from] UtcTimestampError),
+    #[error("no leap second occurs on {0}")] ^8
+    InvalidLeapSecond(Date),
+}
+```
+
+First off, the manual `Display` implementation is gone, replaced by annotations. `thiserror::Error` is a derive macro that handles the legwork for us `^5`.
+
+At `^6`, we take advantage of the `transparent` annotation to make thiserror forward the error message from the wrapped `DateError`. This is useful when the wrapping enum doesn't have any additional context that could clarify the problem for users.
+
+Next, we generate an implementation of `From<DateError>` for `UtcDateTimeError::Date`, and `From<UtcTimestampError>` for `UtcDateTimeError::Time` `^7`. This makes constructing the `UtcDateTimeError` wrapper from its causes trivial.
+
+Best of all, `Result`s containing either `DateError` or `UtcTimestampError` will be transparently morphed into `Result<T, UtcDateTimeError>` when returned with the try operator, `?`:
+
+```rust
+fn some_utc_datetime_func() -> Result<(), UtcDateTimeError> {
+    Err(DateError::InvalidMonth(13))?
+}
+```
+
+Unlike `DateError` and `UtcTimestampError`, `UtcDateTimeError::InvalidLeapSecond` has no `Display` implementation of its own, so the final step is to generate one at `^8`, interpolating the wrapped `Date`.
+
+
+@@@info
+If you'd prefer not to take a dependency on thiserror, you can still get try-operator ergonomics by manually implementing `From` for your error as you would with any other type.
+@@@info
+
+
+### Structured error handling examples from the Rust ecosystem
+
+Don't take my word for it. Here are prime examples of structured errors from two popular Rust crates.
+
+#### tracing
+
+[tracing](https://tracing.rs/tracing/) is the number-one framework for instrumenting your Rust applications. Collecting the events you emit requires a collector – some implementation of `tracing_core::collect::Collect`. As the name suggests, there can be only one global default collector. What happens if you try to set it twice?
+
+```rust tracing tracing-core/src/dispatch.rs
+/// Returned if setting the global dispatcher fails.
+pub struct SetGlobalDefaultError { ^9
+    _no_construct: (),
+}
+
+impl SetGlobalDefaultError {
+    const MESSAGE: &'static str = "a global default trace dispatcher has already been set";
+}
+
+impl fmt::Debug for SetGlobalDefaultError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("SetGlobalDefaultError")
+            .field(&Self::MESSAGE)
+            .finish()
+    }
+}
+
+impl fmt::Display for SetGlobalDefaultError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.pad(Self::MESSAGE)
+    }
+}
+
+#[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+impl error::Error for SetGlobalDefaultError {}
+```
+
+Since there's only one way setting the global default can fail – when it's already been set – this is neatly represented by an empty struct: `SetGlobalDefaultError` `^9`.
+
+#### wgpu
+
+Here's an all-singing, all-dancing example from [wgpu](), a cross-platform graphics API based on the WebGPU standard. Creating compute shader pipelines is fraught with danger:
+
+```rust wgpu wgpu-core/src/pipeline.rs
+#[derive(Clone, Debug, Error)]
+#[non_exhaustive] ^10
+pub enum CreateComputePipelineError {
+    #[error(transparent)]
+    Device(#[from] DeviceError),
+    #[error("Unable to derive an implicit layout")]
+    Implicit(#[from] ImplicitLayoutError), ^11
+    #[error("Error matching shader requirements against the pipeline")]
+    Stage(#[from] validation::StageError),
+    #[error("Internal error: {0}")]
+    Internal(String),
+    #[error("Pipeline constant error: {0}")]
+    PipelineConstants(String), ^12
+    #[error(transparent)]
+    MissingDownlevelFlags(#[from] MissingDownlevelFlags),
+    #[error(transparent)]
+    InvalidResource(#[from] InvalidResourceError),
+}
+```
+
+`CreateComputePipelineError` showcases a thiserror-derived enum error. It includes variants composed from granular, low-level errors `^11`, and new errors exclusive to the creation of the pipeline `^12`.
+
+If you'd like to see more examples from `wgpu`, which adopts the maximalist approach of having distinct error types for each operation, `wgpu_core/src/ray_tracing.rs` [contains several error definitions](https://github.com/gfx-rs/wgpu/blob/1ea5498038b2fd0392bd6cbd81ec71b2438e5c95/wgpu-core/src/ray_tracing.rs#L1), including one 27-variant monster!
+
+
+@@@info
+Non-exhaustive errors
+
+Note that `CreateComputePipelineError` is marked `non_exhaustive` `^10`. This is the wgpu devs saying "we reserve the right for other things to go wrong in future".
+
+When you match a non-exhaustive enum error, rustc will force you to add a catch-all pattern. This will mop up any new variants that you don't explicitly match.
+
+If the devs hadn't done this, adding a new error variant would be a breaking change.
+@@@info
+
+
+### `std::io::Error`, Rust's most challenging error type
+
+`std::io::Error` isn't the prettiest part of the Rust standard library. It's trying to solve a very hard problem – to represent any possible IO error, on all supported operating systems, with the smallest possible overhead. In doing so, it ends up being too low-level for some use cases, and too high-level for others.
+
+We'll scavenge what looks tasty, and leave the bits that look off. Like vultures.
+
+Here's the implementation (for clarity, I've left out the [bit-packing optimization](https://stdrs.dev/nightly/x86_64-unknown-linux-gnu/src/std/io/error/repr_bitpacked.rs.html) used on 64-bit systems):
+
+```rust rust library/std/src/io/error.rs|repr_unpacked.rs
+pub struct Error {
+    repr: Repr,
+}
+
+struct Repr(Inner);
+
+type Inner = ErrorData<Box<Custom>>;
+
+struct Custom {
+    kind: ErrorKind,
+    error: Box<dyn error::Error + Send + Sync>,
+}
+
+enum ErrorData<C> { ^13
+    Os(RawOsError),
+    Simple(ErrorKind),
+    SimpleMessage(&'static SimpleMessage),
+    Custom(C),
+}
+```
+
+Aha! Four error representations wearing a trench coat! And they would have gotten away with it if it wasn't for us meddling crabs.
+
+`ErrorData` specifies four, broad forms of error `^13`:
+-  `OS` wraps error codes returned by the operating system. `RawOsError` is a `usize` alias.
+- `SimpleMessage` is, simply, an error message.
+- `Simple` wraps an `ErrorKind` – another enum, which we'll discuss imminently.
+- `Custom` is a catch-all variant for anything that isn't covered by the other three. Specifically, `std::io::Error` uses an `ErrorData<Box<Custom>>`, meaning `ErrorData::Custom` holds a `Box<Custom>`. `Custom` itself combines an `ErrorKind` and a boxed, dynamic error. Capeesh?
+
+I won't reproduce `ErrorKind` in full – it has more variants than Covid. Here's a sample of the many, many ways IO goes wrong:
+
+```rust rust library/std/src/io/error.rs
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[non_exhaustive]
+pub enum ErrorKind {
+	// ...
+	
+    #[stable(feature = "rust1", since = "1.0.0")]
+    ConnectionRefused, ^14
+    #[stable(feature = "rust1", since = "1.0.0")]
+    ConnectionReset,
+    
+    // ...
+    
+    #[unstable(feature = "io_error_more", issue = "86442")]
+    FilesystemQuotaExceeded, ^15
+    #[stable(feature = "io_error_a_bit_more", since = "1.83.0")]
+    FileTooLarge,
+
+	// ...
+
+    #[stable(feature = "io_error_a_bit_more", since = "1.83.0")]
+    ArgumentListTooLong, ^16
+    #[stable(feature = "rust1", since = "1.0.0")]
+    Interrupted,
+
+	// ...
+
+    #[stable(feature = "rust1", since = "1.0.0")]
+    Other, ^17
+    #[unstable(feature = "io_error_uncategorized", issue = "none")] ^18
+    #[doc(hidden)] ^19
+    Uncategorized,
+}
+```
+
+`ErrorKind` is a smash-up of network failures `^14`, filesystem errors `^15` and OS process complaints `^16`. There are write-only error cases, like `ReadOnlyFilesystem`, in an enum that's shared by read operations. This is not the tight error definition we're used to.
+
+Down in the basement of your program, `std::io` doesn't know what sort of operation you're attempting. It shovels bytes into the OS via the [`Write`] trait, and gets bytes out via the [`Read`] trait. `std::io::Error` is baked into their definitions.
+
+What are the consequences? Since `Read` and `Write` depend on `std::io::Error`, these traits must live in `std`, not `core`. `std::io::Error` presumes the presence of an operating system. But if you're running `no_std`, there's a chance you _are_ the operating system! `no_std` programs have to reinvent these traits without this dependency.
+
+> `no_std` programs have to reinvent `Read` and `Write` without `std::io::Error`.
+
+There's strangeness for `std` programs too. `Read` and `Write` are the basis for higher-level readers and writers. If you design an HTTP connection, a database connection, a packet library, a logger, or anything else with sophisticated IO, odds are that you'll define specialized readers and writers based on lower-level implementations of `Read` and `Write`.
+
+Since specialist implementations must return `std::io::Error` to satisfy the IO trait signatures, the Rust devs had to give `std::io::Error` a way to represent errors that `std::io` doesn't know about.
+
+That's what `Custom` is for.  It's built from any `ErrorKind` variant – probably `Other` – and a `Box<dyn Error + Send + Sync>`. In other words, custom readers and writers are forced to represent their custom errors dynamically. In this mirror world, the more specialized the use case, the more vague `std::io::Error` becomes.
+
+> The more specialized the use case, the more vague `std::io::Error` becomes.
+
+#### What's up with `Other` and `Uncategorized`?
+
+Ever get that creeping feeling – late at night, long after the world has gone to sleep – of something lurking just beyond the corner of your eye? That's Hyrum.
+
+He comes for all of us, [just like he came for `std::io`](https://github.com/rust-lang/rust/issues/86442#issuecomment-889332775).
+
+That link directs to a Rust language tracking issue, in which a number of Rust Nightly users complain of failing tests following the addition of several new `ErrorKind` variants. But `ErrorKind` is non-exhaustive, so how did this happen?
+
+Hyrum's Law.
+
+`Other` `^17` was formerly a catch-all variant not just for Rust users, but for the Rust standard library itself. For example, there is no `ErrorKind` representing a failure to write to `stdout`. Instead, a message describing the problem [was bundled into `Other`](https://github.com/ijackson/rust/blob/cdbe2888979bb8797b05f0d58a6f6e60753983d2/library/std/src/sys/hermit/stdio.rs#L43).
+
+Did the `ErrorKind` documentation explicitly warn users that this was _not_ a stable contract, and that these "other" errors may be replaced as time went on? Yes, it did.
+
+Did Rust users depend on this anyway? Naturally.
+
+When these vague errors became bespoke `ErrorKind` variants, code that expected to find them in `Other` stopped working.
+
+Enter `Uncategorized`. Reason can't stop developers from depending on implicit behavior, but rustc can.
+
+`Uncategorized` is the new home for errors the Rust team hasn't figured out what to do with. The standard library [no longer assigns errors to `Other`](https://github.com/ijackson/rust/blob/333d42de2ce51ec5c3719b425c89c3075ad1865e/library/std/src/sys/hermit/stdio.rs). Since `Uncategorized` is marked as `unstable` `^18`, you can't match it without enabling an unstable feature yourself – you know what you're getting yourself in for.
+
+
+@@@info
+For good measure, `Uncategorized` is also hidden from the docs `^19`, but that's the Hyrum's Law equivalent of trying to hold back the tide.
+@@@info
+
+
+That's `std::io::Error`. Pros: enum-based variants for every error kind Rust knows about. A valiant, workable solution to an unforgiving problem. Cons: everything else.
+
+When designing your own error types, consider these pitfalls carefully, and plan your escape route.
+
+---
+
+Now that you're equipped with the strengths and weaknesses of both dynamic and structured errors in Rust, it should be clear that you're not faced with a binary choice to adopt one or the other.
+
+This isn't _Highlander_. `anyhow` and `thiserror` serve different purposes and may happily coexist within the same codebase.
+
+Choose how to represent each error on a case-by-case basis, guided by what you expect users to do with your error.
+
+And keep an eye out for Hyrum.
+
+He hunts at night.
