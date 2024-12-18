@@ -6,12 +6,12 @@ description: Learn to model 13 billion years of time with an inside look at a Eu
 meta_description: Learn to model 13 billion years of time in Rust with an inside look at a European Space Agency mission simulator.
 color: peony
 tags: [rust, type-driven design, domain modelling, video, rustconf]
-version: 1.0.1
+version: 1.0.2
 ---
 
 ## Introduction
 
-If you dream of final frontier, but Montreal was a bit too far to travel, worry not –
+If you dream of the final frontier, but Montreal was a bit too far to travel, worry not –
 my RustConf 2024 talk is now available for all.
 
 In just 25 minutes, you'll learn how to use Rust to model 13 billion years of time
@@ -32,7 +32,7 @@ and I've included my full speaker notes below the video for those who prefer the
 
 ||https://www.youtube.com/watch?v=zMxlVEKRonk||
 
-## Transcript
+## Speaker notes
 
 ### 1. Introduction
 
