@@ -6,7 +6,7 @@ description: Learn to model and handle any error using idiomatic Rust.
 meta_description: Learn to model and handle any error using idomatic Rust.
 color: sky
 tags: [rust, architecture, error handling]
-version: 1.0.4
+version: 1.1.1
 ---
 
 Are you overwhelmed by the amount of choice Rust gives us for handling errors? Confused about when to return a structured error type or a `Box<dyn Error>`? Intimidated by `Box<dyn Error + Send + Sync + 'static>`'s beefy type signature?
@@ -820,7 +820,7 @@ enum ErrorData<C> { ^13
 Aha! Four error representations wearing a trench coat! And they would have gotten away with it if it wasn't for us meddling crabs.
 
 `ErrorData` specifies four, broad forms of error `^13`:
--  `OS` wraps error codes returned by the operating system. `RawOsError` is a `usize` alias.
+-  `Os` wraps error codes returned by the operating system. `RawOsError` is a `usize` alias.
 - `SimpleMessage` is, simply, an error message.
 - `Simple` wraps an `ErrorKind` – another enum, which we'll discuss imminently.
 - `Custom` is a catch-all variant for anything that isn't covered by the other three. Specifically, `std::io::Error` uses an `ErrorData<Box<Custom>>`, meaning `ErrorData::Custom` holds a `Box<Custom>`. `Custom` itself combines an `ErrorKind` and a boxed, dynamic error. Capeesh?
@@ -864,7 +864,7 @@ pub enum ErrorKind {
 
 `ErrorKind` is a smash-up of network failures `^14`, filesystem errors `^15` and OS process complaints `^16`. There are write-only error cases, like `ReadOnlyFilesystem`, in an enum that's shared by read operations. This is not the tight error definition we're used to.
 
-Down in the basement of your program, `std::io` doesn't know what sort of operation you're attempting. It shovels bytes into the OS via the [`Write`] trait, and gets bytes out via the [`Read`] trait. `std::io::Error` is baked into their definitions.
+Down in the basement of your program, `std::io` doesn't know what sort of operation you're attempting. It shovels bytes into the OS via the [`Write`](https://doc.rust-lang.org/std/io/trait.Write.html) trait, and gets bytes out via the [`Read`](https://doc.rust-lang.org/std/io/trait.Read.html) trait. `std::io::Error` is baked into their definitions.
 
 What are the consequences? Since `Read` and `Write` depend on `std::io::Error`, these traits must live in `std`, not `core`. `std::io::Error` presumes the presence of an operating system. But if you're running `no_std`, there's a chance you _are_ the operating system! `no_std` programs have to reinvent these traits without this dependency.
 
