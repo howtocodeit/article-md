@@ -1,12 +1,12 @@
 ---
-title: "Rust ownership explained: merging linked lists"
-meta_title: "Rust Ownership Explained: Merging Linked Lists"
+title: "Ownership by example: merging linked lists in Rust"
+meta_title: "Ownership By Example: Merging Linked Lists in Rust"
 slug: rust-ownership-explained-merging-linked-lists
-description: How a "simple" linked list coding challenge helps explain Rust's ownership model.
-meta_description: How a "simple" linked list coding challenge helps explain Rust's ownership model.
+description: Grok Rust's ownership model with a "simple" linked list coding challenge.
+meta_description: Grok Rust's ownership model with a "simple" linked list coding challenge.
 color: orange
 tags: [rust, ownership, data structures, algorithms]
-version: 1.0.2
+version: 1.1.0
 ---
 
 "Angus", you say, "you promised us practical, better-than-production Rust. You're not about to walk through a LeetCode question, are you?".
@@ -131,7 +131,6 @@ error[E0382]: use of moved value: `list1`
 error[E0382]: use of moved value: `list2`
 error[E0382]: use of moved value: `tail`
 error[E0382]: use of moved value: `pre_head`
- 
 ```
 
 
@@ -154,11 +153,11 @@ pub fn unwrap(self) -> T
 
 And I say "attempt", because that's fubared too. If the node at the head of `list1` contains the smallest value, we give ownership of `list1` to `tail.next` (taking ownership of `tail` in the process). But to move the head of  `list1` along to its next node, we need access to `list1`... which we've just given away.
 
-## Merging linked lists with idiomatic Rust
+## Merging linked lists with (almost) idiomatic Rust
 
-Let's stop this nonsense. You understand the challenge that Rust's ownership model presents to this sort of algorithm. Let me walk you through the idiomatic way to do it.
+Let's stop this nonsense. You understand the challenge that Rust's ownership model presents to this sort of algorithm. Let me walk you through a more idiomatic way to do it.
 
-The correct solution reminds us to be alert to problems that can be solved without reaching for heavy-duty tools like `Rc` and `RefCell`, which both have runtime overhead.
+A correct solution reminds us to be alert to problems that can be solved without reaching for heavy-duty tools like `Rc` and `RefCell`, which both have runtime overhead.
 
 
 @@@warning
@@ -183,17 +182,17 @@ pub fn merge_two_lists_loop_2(
         let head1 = &mut list1;  
         let head2 = &mut list2;  ^10
   
-        let input_head = if head1.as_ref().unwrap().val < head2.as_ref().unwrap().val {  ^11
+        let smallest_head = if head1.as_ref().unwrap().val < head2.as_ref().unwrap().val {  ^11
             head1  
         } else {  
             head2  
         };  
   
-        std::mem::swap(input_head, next_tail); ^12 
+        std::mem::swap(smallest_head, next_tail); ^12 
              
-        let next_tail_next = &mut next_tail.as_mut().unwrap().next;
-		std::mem::swap(input_head, next_tail_next); ^13
-		next_tail = next_tail_next  ^14
+        let new_next_tail = &mut next_tail.as_mut().unwrap().next;
+		std::mem::swap(smallest_head, new_next_tail); ^13
+		next_tail = new_next_tail  ^14
     }  
   
     *next_tail = if list1.is_some() { list1 } else { list2 };  ^15
@@ -210,11 +209,7 @@ At `^8`, we initialize  `head` as `None`. This isn't equivalent to `pre_head`. T
 
 The loop condition is the same – `Option::is_some()` takes `&self`, so there's no move here `^9`. But this time we start each iteration by taking mutable references to the head of each list `^10`. We don't have ownership of the input heads, we just point to them.
 
-Crucially, it's not the nodes that are mutable, but the references. We can change *where* the references point, but we can't change whatever `Option` they point to.
-
-> It's not the nodes that are mutable, but the references.
-
-We want to avoid owning a node at all costs, so to perform the comparison between values `^11`, we change `head1` and `head2` from `&Option<Box<ListNode>>` into `Option<&Box<ListNode>>` using `Option::as_ref`.
+We'd like to avoid owning a node, so to perform the comparison between values `^11`, we change `head1` and `head2` from `&Option<Box<ListNode>>` into `Option<&Box<ListNode>>` using `Option::as_ref`.
 
 We unwrap the `Option<&Box<ListNode>>` (which is guaranteed to be `Some` thanks to the loop condition), and compare their `val` fields through references.
 
@@ -224,31 +219,35 @@ We unwrap the `Option<&Box<ListNode>>` (which is guaranteed to be `Some` thanks 
 @@@
 
 
-The *reference* to the lesser of the two nodes is assigned to `input_head`, which represents the node that we want to append to our output list. At this point, `input_head` is either a mutable reference to the head of `list1`, or a mutable reference to the head of `list2`.
+The *reference* to the lesser of the two nodes is assigned to `smallest_head`, which represents the node that we want to append to our output list. At this point, `smallest_head` is either a mutable reference to the head of `list1`, or a mutable reference to the head of `list2`.
 
 Now the fun part.
 
-At `^12`, we swap the node that `input_head` references with the node that `next_tail` references. In other words, we put the node `input_head` points to into the space indicated by `next_tail` as "the place to put the next node".
+At `^12`, we swap the node that `smallest_head` references with the node that `next_tail` references. In other words, we put the node `smallest_head` points to into the slot indicated by `next_tail`.
 
-Rust won't allow us to create dangling pointers – `input_head` must still point to something even after we put its referent into the place marked by `next_tail`. That's what `swap` is good for. We initialized `next_tail` as `None`, so we take that `None`, and stick it into the space referenced by `input_head`.
+Rust won't allow us to create dangling pointers – `smallest_head` must still point to something even after we put its referent into place. That's what `swap` is good for. We initialized `next_tail` as `None`, so we take that `None`, and stick it into the space previously occupied by the smallest head.
 
-Imagine that `list1` contained the smallest head on any given iteration of the loop. We've just swapped `&mut list1` and `next_tail`. At this point, `list1` is `None`. `next_tail` points to what used to be `list1`. `head` contains the merged list built up so far *and the rest of the list formerly known as `list1`*.
+Imagine that `list1` contained the smallest head on any given iteration of the loop. We've just swapped `&mut list1` and `next_tail`. At this point, `list1` is `None`. `next_tail` points to what used to be `list1`. `head` contains the merged list built up so far _and the rest of the list formerly known as `list1`_.
 
 > `head` contains the merged list built up so far and the rest of the list formerly known as `list1`.
 
-Not ideal. Let's fix it with another swap `^13`. The first argument to `swap` is `input_head` again, which is a reference to either `list1` or `list2`. Recall that this now points to `None`. The second argument is a mutable reference to the unsorted tail of the list that we just swapped into `next_tail`: `&mut next_tail.as_mut().unwrap().next`. This is a reference to `next_tail`'s tail, which we'll call `next_tail_next`.
+Not ideal. Let's fix it with another swap `^13`. The first argument to `swap` is `smallest_head` again, which is a reference to either `list1` or `list2`. Recall that this now points to `None`. The second argument is a mutable reference to the unsorted _tail_ of the list that we just swapped into `next_tail`: `&mut next_tail.as_mut().unwrap().next`. This is a reference to `next_tail`'s tail, which we'll call `new_next_tail`.
 
-Breaking it down, `next_tail.as_mut()` turns `&mut Option<Box<ListNode>>` into `Option<&mut Box<ListNode>>`, which we unwrap, giving us access to the `next` node of the current tail. Remember, this `next` node represents the new head of one of the input list.
+Breaking it down, `next_tail.as_mut()` turns `&mut Option<Box<ListNode>>` into `Option<&mut Box<ListNode>>`, which we unwrap, giving us access to the `next` node of the current tail. Remember, this `next` node represents the new head of one of the input lists.
 
-We can't move the `next` node through a mutable reference to its parent, of course. We just want a reference. That's why we take a `&mut` to it before passing `next_tail_next` into `swap`.
+If we tried the assignment `let new_next_tail = next_tail.as_mut().unwrap().next`, Rust would interpret this as an attempt to move `next_tail.next` out of `next_tail` through a mutable reference. This isn't allowed. Hence, we take a mutable reference to `next_tail.next` explicitly:
 
-`input_head` was pointing to `None` (the previous value referenced by `next_tail`), so swapping causes `next_tail_next` to once again point to `None`.
+```rust
+`let new_next_tail = &mut next_tail.as_mut().unwrap().next`
+```
 
-`next_tail_next` was pointing to the new head of one of the input lists. This swap puts the new head back into the list it came from, since `input_head` is just a mutable reference to either `list1` or `list2`, depending on which head had the smaller value.
+Now we've got something swappable `^13`. `smallest_head` was pointing to `None` (the previous value referenced by `next_tail`), so swapping causes `new_next_tail` to once again point to `None`.
+
+`new_next_tail` was pointing to the new head of one of the input lists. This swap puts the new head back into the list it came from, since `smallest_head` is just a mutable reference to either `list1` or `list2`, depending on which head had the smaller value.
 
 `next_tail` is still `Some` though. If we continued the loop here, the value we just added to the output would start being swapped around in the next iteration.
 
-Thanks to our swaps, we know that `next_tail_next` is `None`, and that this is the exact spot in memory where the next node should be placed. We can just assign `next_tail_next` to `next_tail` at the bottom of the loop `^14`.
+Thanks to our swaps, we know that `new_next_tail` is `None`, and that this is the exact spot in memory where the next node should be placed. We can just assign `new_next_tail` to `next_tail` at the bottom of the loop `^14`.
 
 By doing this, we also guarantee that `next_tail` will always point to `None` at the top of the loop, and that the final node in the output list will correctly point its `next` field to `None`.
 
@@ -258,9 +257,9 @@ Setting `*next_tail = None` wouldn't work.
 
 It's critical to remember that `next_tail` is not "the next node" but "the place in memory where the next node should go".
 
-`*next_tail = None` would cause the node we just put there to be dropped. The next iteration of the loop would be the next node in the exact same place, which would again be dropped, leading to a final output list of `None`.
+`*next_tail = None` would cause the node we just put there to be dropped. The next iteration of the loop would put the next node in the exact same place, which would again be dropped, leading to a final output list of `None`.
 
-We have to advance `next_tail` to point to the place where the next node belongs.
+We must advance `next_tail` to point to the place where the _next_ node belongs.
 @@@
 
 
@@ -268,7 +267,7 @@ Once one of the lists is exhausted, we just whack the remaining list onto the en
 
 Return the head, and there you have it – an iterative, efficient solution that avoids working with owned input nodes.
 
-## Merging linked lists recursively
+## Merging linked lists readably with recursion
 
 It's possible to solve this problem recursively, and more readably than the iterative approach.
 
@@ -313,4 +312,73 @@ However, more expensive code that performs _well enough_ for your use case is ty
 
 You're on _How To Code It_, so naturally you understand both, but keep this trade-off in mind when coding collaboratively.
 
-No exercises this time – head on over to [LeetCode](https://leetcode.com/) or [HackerRank](https://www.hackerrank.com/) and sit with the discomfort of your Rust not being quite as strong as you hoped. It's a journey we all have to take.
+## The best of both worlds: idiomatic, ergonomic iteration
+
+With Rust, we can have nice things.
+
+Aesthetes AnthonyMikh and calebsander teamed up on third solution [in the Discussion](https://github.com/howtocodeit/comments/discussions/6#discussioncomment-9930479). It's a good one, combining the readability of `match`-based recursion with the space complexity of a loop:
+
+```rust
+pub fn merge_two_lists(
+    mut list1: Option<Box<ListNode>>,
+    mut list2: Option<Box<ListNode>>
+) -> Option<Box<ListNode>> {
+    let mut head = None;
+    let mut next_tail = &mut head;
+    
+    loop {
+        match (list1, list2) {
+            (Some(mut head1), Some(mut head2)) => { ^21
+                let smallest_head = if head1.val < head2.val {
+                    list1 = head1.next.take(); ^22
+                    list2 = Some(head2); ^23
+                    head1
+                } else {
+                    list2 = head2.next.take();
+                    list1 = Some(head1);
+                    head2
+                };
+                next_tail = &mut next_tail.insert(smallest_head).next; ^24
+            }
+            (tail, None) | (None, tail) => { ^25
+                *next_tail = tail;
+                return head
+            }
+        }
+    }
+}
+```
+
+Like the recursive implementation, this one takes ownership of the nodes. Unlike the recursive implementation, it does so in a loop.
+
+Ownership of the heads of both lists is acquired at the top of each iteration `^21`, which requires us to put something back before the start of the next.
+
+Let's assume `list1`'s head has the smaller value. We assign `head1`'s `next` node directly to `list1` `^22`, setting up `list1` for the next iteration and keeping `head1` for ourselves. `Option::take` gives us ownership of everything after `head1` and leaves `None` in its place. I find this more intuitive than `mem::swap`.
+
+@@@info
+`Option::take` is in fact implemented in terms of `mem::replace`:
+
+```rust rust src/core/option.rs
+impl<T> Option<T>
+    #[inline]
+    #[stable(feature = "rust1", since = "1.0.0")]
+    #[cfg_attr(bootstrap, rustc_allow_const_fn_unstable(const_mut_refs))]
+    #[rustc_const_stable(feature = "const_option", since = "1.83.0")]
+    pub const fn take(&mut self) -> Option<T> {
+        // FIXME(const-hack) replace `mem::replace` by `mem::take` when the latter is const ready
+        mem::replace(self, None)
+    }
+}
+```
+@@@
+
+Having no further use for the larger `head2`, we hand ownership straight back to `list2` `^23`.
+
+Rather than do the `swap` dance with `next_tail`, we invoke `Option::insert` to put `smallest_head` in its place. We know that `next_tail` is `None` at the top of the loop, so there's no risk of overwriting a node. Finally, we assign a mutable reference to the new tail's `next` node to `next_tail`, setting up the next iteration `^24`.
+
+In the case where either of the two lists is `None` `^25`, our work is done. Just slot the
+whole of the remaining list into the spot indicated by `next_tail`, and return the head of the sorted list.
+
+Beautiful work – thank you for the contribution.
+
+No exercises this time – head on over to [LeetCode](https://leetcode.com/) or [HackerRank](https://www.hackerrank.com/) and sit with the discomfort of your Rust not being quite as strong as you hoped. It's a journey we all have to take.
