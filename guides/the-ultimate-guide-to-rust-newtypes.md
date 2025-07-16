@@ -474,7 +474,7 @@ Well, `FromStr` came first. It predates the addition of `TryFrom` to the standar
 Whether you choose to implement `FromStr` in addition to `From` or `TryFrom` depends on three things:
 
 - Whether you're interfacing with older code that has parameters bounded by `FromStr`, in which case you have no choice but to implement it for your newtype.
-- Whether you want to take advantage of imnplementations over `FromStr` types, like [`str::parse`](https://doc.rust-lang.org/stable/std/primitive.str.html#method.parse) and [`serde_with::DeserializeFromStr`](https://docs.rs/serde_with/latest/serde_with/derive.DeserializeFromStr.html).
+- Whether you want to take advantage of implementations over `FromStr` types, like [`str::parse`](https://doc.rust-lang.org/stable/std/primitive.str.html#method.parse) and [`serde_with::DeserializeFromStr`](https://docs.rs/serde_with/latest/serde_with/derive.DeserializeFromStr.html).
 - Personal preference.
 
 In the latter case, _be consistent_. Whatever your team decides, document it and use a linter to enforce your choice, because none of you can be trusted to remember.
