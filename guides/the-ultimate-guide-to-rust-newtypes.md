@@ -1,15 +1,22 @@
 ---
+slug: ultimate-guide-rust-newtypes
 title: The ultimate guide to Rust newtypes
 meta_title: The Ultimate Guide to Rust Newtypes
-slug: ultimate-guide-rust-newtypes
 description: Clean up your code, clarify business logic and improve test coverage with Rust's newtype wrappers.
 meta_description: Clean up your code, clarify business logic and improve test coverage with Rust's newtype wrappers.
-color: peony
 tags: [rust, newtypes, type-driven design]
-version: 1.0.11
+version: 1.0.12
+color: peony
+hero_image_url: https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734678002/mechacrab_300x300_e0c164f945.webp
+hero_image_alt: Illustration of a new type of railgun-mounted mecha-crab
+og_image_url: https://res.cloudinary.com/dkh7xdo6x/image/upload/v1715592802/newtypes_og_4221823a11.jpg
 ---
 
 # The Ultimate Guide to Rust Newtypes
+
+::toc
+
+::::::guide
 
 ## What are newtype wrappers in Rust?
 
@@ -17,10 +24,11 @@ You've read [The Book](https://doc.rust-lang.org/book/), so I'm sure you've hear
 
 But if reading The Book is your only exposure to newtypes, you might think that they're only useful for getting around the Orphan Rule. Think again.
 
-@@@info
-The Orphan Rule
+:::aside{type=info}
+::uh1[The Orphan Rule]
 
-## You can implement a trait for a type only if either the trait or the type is defined in your crate.
+You can implement a trait for a type only if either the trait or the type is defined in your crate.
+:::
 
 By wrapping `Vec<String>` in a tuple struct, The Book shows us how to implement a trait defined in a crate we don't control on a struct which is also outside our control.
 
@@ -45,12 +53,12 @@ Newtypes are the raw ingredients of type-driven design in Rust, a practice which
 Right now, somewhere in your organization's codebase, is a function that looks like this – I guarantee it.
 
 ```rust
-pub fn create_user(email: &str, password: &str) -> Result<User, CreateUserError> { ^1
+pub fn create_user(email: &str, password: &str) -> Result<User, CreateUserError> { :coderef[1]
     validate_email(email)?;
-    validate_password(password)?;  ^2
+    validate_password(password)?; :coderef[2]
     let password_hash = hash_password(password)?;
     // Save user to database
-    // Trigger welcome emails ^3
+    // Trigger welcome emails :coderef[3]
     // ...
     Ok(User)
 }
@@ -58,22 +66,22 @@ pub fn create_user(email: &str, password: &str) -> Result<User, CreateUserError>
 
 Does this make you uneasy? It should.
 
-At `^1` we accept two `&str`s: `email` and `password`. The probability that someone, at some point, will screw up the order of these arguments and pass a password as `email` and an email address as `password` is 1.
+At :codelink[1] we accept two `&str`s: `email` and `password`. The probability that someone, at some point, will screw up the order of these arguments and pass a password as `email` and an email address as `password` is 1.
 
 I've been that person. You've been that person. Everyone on your team _is_ that person. It's a time bomb.
 
 This is problematic when you consider that an email address is generally safe to log (depending on your data protection regime 🙃), whereas logging a plaintext password will bring great shame upon your family – and great fines upon your company when the predictable breach occurs.
 
-Because of this liability, your business-critical function has to concern itself with checking that the `&str`s it's been given are, in fact, an email address and a password `^2`.
+Because of this liability, your business-critical function has to concern itself with checking that the `&str`s it's been given are, in fact, an email address and a password :codelink[2].
 
-It would much rather be doing important business-logic things `^3`, but it's cluttered with code making sure its arguments are what they claim to be. What is this, JavaScript?
+It would much rather be doing important business-logic things :codelink[3], but it's cluttered with code making sure its arguments are what they claim to be. What is this, JavaScript?
 
-> Email sign-up
+::subscribe
 
 This uncomfortable cohabitation results in complex error types:
 
 ```rust
-#[derive(Error, Clone, Debug, PartialEq)]  ^4
+#[derive(Error, Clone, Debug, PartialEq)] :coderef[4]
 pub enum CreateUserError {
     #[error("invalid email address: {0}")]
     InvalidEmail(String),
@@ -91,10 +99,11 @@ pub enum CreateUserError {
 }
 ```
 
-@@@info
-`thiserror`
+:::aside{type=info}
+::uh1[`thiserror`]
 
-When you see `#[derive(Error)]` `^4`, you're usually watching the [`thiserror` crate](https://docs.rs/thiserror/latest/thiserror/) in action. `thiserror` is a powerful library for quickly creating expressive error types, and I highly recommend it.
+When you see `#[derive(Error)]` :codelink[4], you're usually watching the [`thiserror` crate](https://docs.rs/thiserror/latest/thiserror/) in action. `thiserror` is a powerful library for quickly creating expressive error types, and I highly recommend it.
+:::
 
 And complex error types means you need a lot of test cases to cover all practical outcomes:
 
@@ -138,7 +147,7 @@ This is how many real production functions behave and, let me tell you, I don't 
 
 Newtyping is the practice of investing extra time upfront to design datatypes that are always valid. In the long run, you prevent human error, maintain fabulously readable code and make unit testing trivial.
 
-> Newtyping is the practice of investing extra time upfront to design datatypes that are always valid.
+> "Newtyping is the practice of investing extra time upfront to design datatypes that are always valid."
 
 I'll show you how.
 
@@ -151,9 +160,9 @@ We agree on why this matters. Excellent. Now, let's take our first step in the r
 pub struct EmailAddress(String);
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Password(String);  ^5
+pub struct Password(String); :coderef[5]
 
-pub fn create_user(email: EmailAddress, password: Password) -> Result<User, CreateUserError> { ^6
+pub fn create_user(email: EmailAddress, password: Password) -> Result<User, CreateUserError> { :coderef[6]
     validate_email(&email)?;
     validate_password(&password)?;
     let password_hash = hash_password(&password)?;
@@ -162,13 +171,13 @@ pub fn create_user(email: EmailAddress, password: Password) -> Result<User, Crea
 }
 ```
 
-We can define tuple structs `^5` as wrappers around owned `String`s that represent an email address and a password. Just like The Book showed us!
+We can define tuple structs :codelink[5] as wrappers around owned `String`s that represent an email address and a password. Just like The Book showed us!
 
-Now, our function requires distinctly typed arguments `^6`. It's impossible to pass a `Password` to as an argument of type `EmailAddress`, and vice versa.
+Now, our function requires distinctly typed arguments :codelink[6]. It's impossible to pass a `Password` to as an argument of type `EmailAddress`, and vice versa.
 
 We've eliminated one source of human error, but believe me, plenty remain. Never forget, if a software engineer _can_ fuck it up, they _will_ fuck it up.
 
-> If a software engineer _can_ fuck it up, they _will_ fuck it up.
+> "If a software engineer _can_ fuck it up, they _will_ fuck it up."
 
 In the depths of a hangover, you might be tempted to unleash this particular evil into your repo:
 
@@ -196,10 +205,11 @@ I'm glad you asked.
 
 Instead of running validations on data that may or may not be valid when it's already inside the core of your application, require your business logic to accept only data that has been parsed into an acceptable representation.
 
-@@@info
-"Parse, don't validate"
+:::aside{type=info}
+::uh1["Parse, don't validate"]
 
-## This phrase was made famous in software engineering circles by [Alexis King's blog post](https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/) of the same name. It's one of the all-time great pieces of writing on type-driven design.
+This phrase was made famous in software engineering circles by [Alexis King's blog post](https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/) of the same name. It's one of the all-time great pieces of writing on type-driven design.
+:::
 
 First, let's pull our email address validation code out of the business function it was cluttering. From this point onwards, I'll be giving code only for `EmailAddress` – I've left the implementation of `Password` as an [exercise](#exercises).
 
@@ -209,11 +219,11 @@ pub struct EmailAddress(String);
 
 #[derive(Error, Debug, Clone, PartialEq)]
 #[error("{0} is not a valid email address")]
-pub struct EmailAddressError(String);  ^7
+pub struct EmailAddressError(String); :coderef[7]
 
 impl EmailAddress {
     pub fn new(raw_email: &str) -> Result<Self, EmailAddressError> {
-        if email_regex().is_match(raw_email) {  ^8
+        if email_regex().is_match(raw_email) { :coderef[8]
             Ok(Self(raw_email.into()))
         } else {
             Err(EmailAddressError(raw_email))
@@ -223,28 +233,29 @@ impl EmailAddress {
 
 #[derive(Error, Clone, Debug, PartialEq)]
 #[error("a user with email address {0} already exists")]
-pub struct UserAlreadyExistsError(EmailAddress); ^9
+pub struct UserAlreadyExistsError(EmailAddress); :coderef[9]
 
 fn create_user(email: EmailAddress, password: Password) -> Result<User, UserAlreadyExistsError> {
     // Save user to database
     // Trigger welcome emails
-    // ... ^10
+    // ... :coderef[10]
     Ok(User)
 }
 ```
 
-This is very exciting. In order to get hold of an `EmailAddress`, a raw string _must_ pass the validation performed in the `EmailAddress::new` constructor. That means that any email address passed to `create_user` _must_ be valid, so `create_user` no longer needs to check – it's all business logic, baby! `^10`
+This is very exciting. In order to get hold of an `EmailAddress`, a raw string _must_ pass the validation performed in the `EmailAddress::new` constructor. That means that any email address passed to `create_user` _must_ be valid, so `create_user` no longer needs to check – it's all business logic, baby! :codelink[10]
 
-@@@warning
-Email address validation
+:::aside{type=warning}
+::uh1[Email address validation]
 
 You may be surprised by what counts as a valid email address. Take this Lovecraftian nightmare: `@1st.relay,@2nd.relay:user@final.domain`.
 
 No, really. This is an honest-to-god example from an actual [RFC](https://datatracker.ietf.org/doc/html/rfc1711.html#section-7).
 
-Never write your own email validation regex `^8`. Don't copy-paste regexes you find on Stack Overflow. Use a well maintained library with good community standing, and proceed on the assumption that they've also got it wrong.
+Never write your own email validation regex :codelink[8]. Don't copy-paste regexes you find on Stack Overflow. Use a well maintained library with good community standing, and proceed on the assumption that they've also got it wrong.
+:::
 
-Voilá. We have drastically simplified the error handling. Both `EmailAddress::new` and `create_user` now return only one type of error each `^7` `^9`. And notice how, at `^9`, even our error types contain guaranteed-valid, type-safe fields!
+Voilá. We have drastically simplified the error handling. Both `EmailAddress::new` and `create_user` now return only one type of error each :codelink[7] :codelink[9]. And notice how, at :codelink[9], even our error types contain guaranteed-valid, type-safe fields!
 
 Now, we can write sane unit tests instead of badly disguised integration tests.
 
@@ -279,12 +290,13 @@ mod create_user_tests {
 
 Do you see how we're getting extraordinary value from a small shift in mindset? We're using Rust's remarkable type system to do a lot of heavy lifting for us. If an instance of a newtype exists, we know that it's valid.
 
-@@@info
+:::aside{type=info}
 If you're especially perceptive, you may have spotted something off about our definition of `create_user` and our desire to test whether a user already exists.
 
 Checking that a user exists requires a database lookup but, for the sake of simplifying my examples, `create_user` doesn't allow for a mock database to be injected during test.
 
-## If you're hungry to learn a clean, maintainable way to achieve this, check out [Master Hexagonal Architecture in Rust](https://www.howtocodeit.com/articles/master-hexagonal-architecture-rust)!
+If you're hungry to learn a clean, maintainable way to achieve this, check out [Master Hexagonal Architecture in Rust](https://www.howtocodeit.com/articles/master-hexagonal-architecture-rust)!
+:::
 
 ### Newtype mutability
 
@@ -295,7 +307,7 @@ struct NonEmptyVec<T>(Vec<T>);
 
 impl<T> NonEmptyVec<T> {
     fn pop(&mut self) -> Option<T> {
-        if self.0.len() == 1 {  ^11
+        if self.0.len() == 1 { :coderef[11]
             None
         } else {
             self.0.pop()
@@ -303,20 +315,20 @@ impl<T> NonEmptyVec<T> {
     }
 
     fn last(&self) -> &T {
-        self.0.last().unwrap() ^12
+        self.0.last().unwrap() :coderef[12]
     }
 }
 ```
 
 `NonEmptyVec` is a wrapper around a `Vec<T>` that must always have at least one element. I've omitted the constructor for brevity.
 
-`NonEmptyVec::pop` takes `&mut self`, which means we need to check that we make only valid mutations. We can't pop the final element from a `NonEmptyVec` `^11`!
+`NonEmptyVec::pop` takes `&mut self`, which means we need to check that we make only valid mutations. We can't pop the final element from a `NonEmptyVec` :codelink[11]!
 
-The flip side of taking these precautions is that other operations become simpler. Unlike `Vec<T>::last`, `NonEmptyVec<T>::last` is infallible, so we don't need to return an `Option<&T>` `^12`.
+The flip side of taking these precautions is that other operations become simpler. Unlike `Vec<T>::last`, `NonEmptyVec<T>::last` is infallible, so we don't need to return an `Option<&T>` :codelink[12].
 
 ## The most important newtype trait implementations
 
-So we're agreed that newtypes are fire. 🔥 Let's turn our attention to making them as easy as possible to work with. I'll start simple, and work up to more adventurous code.
+So we're agreed that newtypes are fire 🔥. Let's turn our attention to making them as easy as possible to work with. I'll start simple, and work up to more adventurous code.
 
 ### `derive` standard traits
 
@@ -329,14 +341,15 @@ pub struct EmailAddress(String);
 
 `String` also implements `Default`, but a "default email address" doesn't make much sense, so we don't derive it. And, since `String` isn't `Copy`, neither is `EmailAddress`.
 
-@@@info
-Build the habit
+:::aside{type=info}
+::uh1[Build the habit]
 
 Deriving these standard traits for _any_ type where they make sense is a good habit to develop – even if you don't immediately see a use for them.
 
 This is especially important if you're writing a library, since your users won't be able to implement these traits themselves due to [the Orphan Rule](#the-orphan-rule). They'd have to wrap your newtypes in their own newtypes just to get this basic functionality.
 
-## Kiss those GitHub stars goodbye.
+Kiss those GitHub stars goodbye.
+:::
 
 But what about `Display`? There's no `derive` macro for `Display`, so let's do it manually for now.
 
@@ -348,10 +361,9 @@ impl Display for EmailAddress {
 }
 ```
 
-@@@info
+:::aside{type=info}
 Implementing `Display` gets us a free implementation of `std::string::ToString`. 🎉
-
----
+:::
 
 ### Manually implement special cases
 
@@ -381,12 +393,12 @@ impl Subsecond {
 Happily, that's not true of `Subsecond`. There _is_ a total equality and ordering of all `f64`s between `0.0` and `1.0`. This calls for manual trait implementations.
 
 ```rust
-#[derive(Debug, Copy, Clone, PartialEq, Default)]  ^13
+#[derive(Debug, Copy, Clone, PartialEq, Default)] :coderef[13]
 pub struct Subsecond(f64);
 
 impl Eq for Subsecond {}
 
-impl PartialOrd for Subsecond {  ^14
+impl PartialOrd for Subsecond { :coderef[14]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
@@ -396,15 +408,15 @@ impl Ord for Subsecond {
     fn cmp(&self, other: &Self) -> Ordering {
         match self.0.partial_cmp(&other.0) {
             Some(ordering) => ordering,
-            None => unreachable!(),  ^15
+            None => unreachable!(), :coderef[15]
         }
     }
 }
 ```
 
-Notice that we're now deriving `PartialEq` but not `PartialOrd` `^13`. How come?
+Notice that we're now deriving `PartialEq` but not `PartialOrd` :codelink[13]. How come?
 
-If an implementation of `Ord` exists, a correct implementation of `PartialOrd::partial_cmp` simply wraps the return value of `Ord::cmp` in an `Option` `^14` `^15`. This prevents us from accidentally implementing `Ord` and `PartialOrd` in ways that disagree with each other.
+If an implementation of `Ord` exists, a correct implementation of `PartialOrd::partial_cmp` simply wraps the return value of `Ord::cmp` in an `Option` :codelink[14] :codelink[15]. This prevents us from accidentally implementing `Ord` and `PartialOrd` in ways that disagree with each other.
 
 A derived implementation of `PartialOrd` _wouldn't_ call our manual `Ord` implementation – it would call `PartialOrd` on the underlying `f64`. This isn't what we want, so we need to define both `PartialOrd` and `Ord` ourselves, or [Clippy will yell at us](https://rust-lang.github.io/rust-clippy/master/index.html#derive_ord_xor_partial_ord).
 
@@ -431,11 +443,11 @@ impl From<i32> for WrappedI32 {
 
 fn demonstrate() {
     let _ = WrappedI32::from(84);
-    let _: WrappedI32 = 84.into(); ^16
+    let _: WrappedI32 = 84.into(); :coderef[16]
 }
 ```
 
-We only implemented `From`, but we got `Into` for free `^16`.
+We only implemented `From`, but we got `Into` for free :codelink[16].
 
 ### Fallible conversions
 
@@ -448,7 +460,7 @@ impl TryFrom<f64> for Subsecond {
     type Error = SubsecondError;
 
     fn try_from(raw: f64) -> Result<Self, Self::Error> {
-        Subsecond::new(raw)  ^17
+        Subsecond::new(raw) :coderef[17]
     }
 }
 
@@ -458,14 +470,14 @@ fn demonstrate() {
 }
 ```
 
-Note how `TryFrom` is implemented as a simple call to the `Subsecond` constructor `^17`. A newtype's constructor serves as its source of truth – never have multiple constructors for the same use case.
+Note how `TryFrom` is implemented as a simple call to the `Subsecond` constructor :codelink[17]. A newtype's constructor serves as its source of truth – never have multiple constructors for the same use case.
 
 For instance, it's valid to have two constructors `Subsecond::default()` and `Subsecond::new(raw: f64)`, since these serve two distinct purposes. Avoid having competing implementations for `Subsecond::new(raw: f64)` and `Subsecond::try_from(raw: f64)`, however. This doubles the code you need to maintain and test for no benefit. Define conversion traits in terms of a canonical constructor.
 
-> Define conversion traits in terms of a canonical constructor.
+> "Define conversion traits in terms of a canonical constructor."
 
-@@@info
-What's up with `FromStr`?
+:::aside{type=info}
+::uh1[What's up with `FromStr`?]
 
 Newcomers to Rust are often confused by the existence of `FromStr`, which is identical to `TryFrom<&str>` for most practical purposes.
 
@@ -479,7 +491,8 @@ Whether you choose to implement `FromStr` in addition to `From` or `TryFrom` dep
 
 In the latter case, _be consistent_. Whatever your team decides, document it and use a linter to enforce your choice, because none of you can be trusted to remember.
 
-## I don't usually implement `FromStr`. It's one less thing to test.
+I don't usually implement `FromStr`. It's one less thing to test.
+:::
 
 ## From newtypes to primitives: `AsRef`, `Deref`, `Borrow` and more
 
@@ -497,17 +510,18 @@ impl EmailAddress {
         self.0
     }
 
-	^18
+	:coderef[18]
 
 }
 ```
 
-@@@info
-Naming conventions
+:::aside{type=info}
+::uh1[Naming conventions]
 
-## Confused about when to name your methods `to_x`, `into_x` and `as_x`? [The Rust API guidelines](https://rust-lang.github.io/api-guidelines/naming.html#ad-hoc-conversions-follow-as_-to_-into_-conventions-c-conv) have got you covered.
+Confused about when to name your methods `to_x`, `into_x` and `as_x`? [The Rust API guidelines](https://rust-lang.github.io/api-guidelines/naming.html#ad-hoc-conversions-follow-as_-to_-into_-conventions-c-conv) have got you covered.
+:::
 
-Recall that implementing `Display` gives us a free implementation of `ToString`. Shadowing this implementation is such bad news that [Clippy considers this an error](https://rust-lang.github.io/rust-clippy/master/index.html#inherent_to_string_shadow_display). That's why I haven't defined `EmailAddress::to_string` at `^18`.
+Recall that implementing `Display` gives us a free implementation of `ToString`. Shadowing this implementation is such bad news that [Clippy considers this an error](https://rust-lang.github.io/rust-clippy/master/index.html#inherent_to_string_shadow_display). That's why I haven't defined `EmailAddress::to_string` at :codelink[18].
 
 Consider carefully how other developers will use your code. If you're writing an application maintained by one team, which won't be a dependency of some higher-level code, you can stop implementing getters here.
 
@@ -553,27 +567,28 @@ I'll show you the right wires to cut after demonstrating why it's attractive for
 fn demonstrate() {
     let raw = "EMAIL@ADDRESS.COM";
     let email = EmailAddress::new(raw).unwrap();
-    takes_a_str(&email);  ^19
+    takes_a_str(&email); :coderef[19]
 
-    let lower = email.to_lowercase();  ^20
+    let lower = email.to_lowercase(); :coderef[20]
     assert_eq!(lower, "email@address.com");
 
-	assert_eq!(*raw, *email); ^21
+	assert_eq!(*raw, *email); :coderef[21]
 }
 
 fn takes_a_str(_: &str) {}
 ```
 
-Pretty impressive, no? `&email` isn't a `&str` `^19`, but `Deref` tells the compiler to treat it like one. This is an example of "[deref coercion](https://doc.rust-lang.org/std/ops/trait.Deref.html#deref-coercion)". We could also have written `takes_a_str(email.deref())`.
+Pretty impressive, no? `&email` isn't a `&str` :codelink[19], but `Deref` tells the compiler to treat it like one. This is an example of "[deref coercion](https://doc.rust-lang.org/std/ops/trait.Deref.html#deref-coercion)". We could also have written `takes_a_str(email.deref())`.
 
-Deref coercion also gives us all the `&self` methods of `str` on `EmailAddress` `^20`. This feels similar to inheritance in object-oriented languages, and it's what makes a `Box<T>` or `Rc<T>` almost as convenient to use as an instance of `T` itself. [The Rust Reference](https://doc.rust-lang.org/reference/expressions/method-call-expr.html) has the full details on how method lookup works in these cases.
+Deref coercion also gives us all the `&self` methods of `str` on `EmailAddress` :codelink[20]. This feels similar to inheritance in object-oriented languages, and it's what makes a `Box<T>` or `Rc<T>` almost as convenient to use as an instance of `T` itself. [The Rust Reference](https://doc.rust-lang.org/reference/expressions/method-call-expr.html) has the full details on how method lookup works in these cases.
 
-Finally, it causes `*email` to desugar to `*Deref::deref(&email)` `^21`.
+Finally, it causes `*email` to desugar to `*Deref::deref(&email)` :codelink[21].
 
-@@@warning
+:::aside{type=warning}
 Careful! `*email` is _not_ equivalent to `Deref::deref(&email)`, which is a source of confusion for people who expect the dereference operator `*` to return the return type of the `deref` implementation, which in our case would be `&str`.
 
-## `*` dereferences all the way down to memory bedrock – `str`.
+`*` dereferences all the way down to memory bedrock – `str`.
+:::
 
 So why do we have to be cautious with `Deref`?
 
@@ -585,10 +600,11 @@ This decision is critical if your newtype wraps a user-controlled type generical
 
 The best advice I've seen on this issue comes from [Rust for Rustaceans](https://rust-for-rustaceans.com/) (an essential read): prefer associated functions to inherent methods on generic wrapper types.
 
-@@@info
-Inherent methods
+:::aside{type=info}
+::uh1[Inherent methods]
 
-## An [inherent method](https://doc.rust-lang.org/reference/items/implementations.html#inherent-implementations) of type `T` is any method defined in a standard `impl T` block. Remember, methods have a `self` or `&self` receiver (or their `mut` variants). Functions don't.
+An [inherent method](https://doc.rust-lang.org/reference/items/implementations.html#inherent-implementations) of type `T` is any method defined in a standard `impl T` block. Remember, methods have a `self` or `&self` receiver (or their `mut` variants). Functions don't.
+:::
 
 If a newtype has only associated functions, it has no methods that could inadvertently intercept method calls intended for the wrapped type. Behold:
 
@@ -597,7 +613,7 @@ If a newtype has only associated functions, it has no methods that could inadver
 struct SmartBox<T>(T);
 
 impl<T> Deref for SmartBox<T> {
-    type Target = T;  ^22
+    type Target = T; :coderef[22]
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -605,7 +621,7 @@ impl<T> Deref for SmartBox<T> {
 }
 
 impl<T> SmartBox<T> {
-    fn print_best_rust_resource() {  ^23
+    fn print_best_rust_resource() { :coderef[23]
         println!("howtocodeit.com");
     }
 }
@@ -613,7 +629,7 @@ impl<T> SmartBox<T> {
 struct ConfusedUnitStruct;
 
 impl ConfusedUnitStruct {
-    fn print_best_rust_resource(&self) {  ^24
+    fn print_best_rust_resource(&self) { :coderef[24]
         println!("Scrabbling around on YouTube or something?");
     }
 }
@@ -621,7 +637,7 @@ impl ConfusedUnitStruct {
 fn demonstrate() {
     let smart_box = SmartBox(ConfusedUnitStruct);
     smart_box.print_best_rust_resource();
-    SmartBox::<ConfusedUnitStruct>::print_best_rust_resource();  ^25
+    SmartBox::<ConfusedUnitStruct>::print_best_rust_resource(); :coderef[25]
 }
 ```
 
@@ -632,20 +648,19 @@ Scrabbling around on YouTube or something?
 howtocodeit.com
 ```
 
-At `^22` we implement `Deref` so that `SmartBox<T>::deref` returns `&T`. Our `SmartBox`, being clever, has an associated function informing us that [howtocodeit.com](https://www.howtocodeit.com) is the best Rust resource `^23`.
+At :codelink[22] we implement `Deref` so that `SmartBox<T>::deref` returns `&T`. Our `SmartBox`, being clever, has an associated function informing us that [howtocodeit.com](https://www.howtocodeit.com) is the best Rust resource :codelink[23].
 
-But what's this? A bewildered developer wants to wrap their `ConfusedUnitStruct` in `SmartBox`! `ConfusedUnitStruct` has a method with some very concerning views about the path to Rust mastery `^24`.
+But what's this? A bewildered developer wants to wrap their `ConfusedUnitStruct` in `SmartBox`! `ConfusedUnitStruct` has a method with some very concerning views about the path to Rust mastery :codelink[24].
 
-Luckily, `SmartBox` believes that all views should be heard – even the ones that are wrong. Because `SmartBox` implements `print_best_rust_resource` as an associated function, it can't clash with any method implemented by the types it derefs to. Both functions can be called unambiguously `^25`.
+Luckily, `SmartBox` believes that all views should be heard – even the ones that are wrong. Because `SmartBox` implements `print_best_rust_resource` as an associated function, it can't clash with any method implemented by the types it derefs to. Both functions can be called unambiguously :codelink[25].
 
-> Prefer associated functions to inherent methods on generic wrapper types
+> "Prefer associated functions to inherent methods on generic wrapper types."
 
 ### `Borrow`
 
-@@@warning
+:::aside{type=warning}
 If you're looking for a way to shoot yourself in the foot with safe Rust, the `Borrow` trait is a great option.
-
----
+:::
 
 `Borrow` is deceptively simple. A type which is `Borrow<T>` can give you a `&T`.
 
@@ -664,33 +679,33 @@ For example, if we manually implement `PartialEq` for `EmailAddress` to be case 
 ```rust
 impl PartialEq for EmailAddress {
     fn eq(&self, other: &Self) -> bool {
-        self.0.eq_ignore_ascii_case(&other.0)  ^26
+        self.0.eq_ignore_ascii_case(&other.0) :coderef[26]
     }
 }
 
 impl Hash for EmailAddress {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.to_ascii_lowercase().hash(state);  ^27
+        self.0.to_ascii_lowercase().hash(state); :coderef[27]
     }
 }
 
 impl Borrow<str> for EmailAddress {
     fn borrow(&self) -> &str {
-        &self.0  ^28
+        &self.0 :coderef[28]
     }
 }
 
 fn no_no_no_no_no() {
-    let mut login_attempts: HashMap<EmailAddress, i32> = HashMap::new();  ^29
+    let mut login_attempts: HashMap<EmailAddress, i32> = HashMap::new(); :coderef[29]
 
     let raw_uppercase = "EMAIL@TEST.COM";
     let raw_lowercase = "email@test.com";
 
-    let email = EmailAddress::new(raw_uppercase).unwrap();  ^30
+    let email = EmailAddress::new(raw_uppercase).unwrap(); :coderef[30]
 
-    login_attempts.insert(email, 2);  ^31
+    login_attempts.insert(email, 2); :coderef[31]
 
-    let got_attempts = login_attempts.get(raw_lowercase);  ^32
+    let got_attempts = login_attempts.get(raw_lowercase); :coderef[32]
     assert_eq!(got_attempts, Some(&2));
 }
 ```
@@ -698,22 +713,22 @@ fn no_no_no_no_no() {
 ```text
 assertion `left == right` failed
   left: None
- right: Some(2)
+  right: Some(2)
 ```
 
-At `^26` we make `EmailAddress` equality case insensitive, remembering that two equal objects must also have equal hashes `^27`. The `Borrow` implementation at `^28` heralds the end of days.
+At :codelink[26] we make `EmailAddress` equality case insensitive, remembering that two equal objects must also have equal hashes :codelink[27]. The `Borrow` implementation at :codelink[28] heralds the end of days.
 
-We instantiate a `HashMap` with `EmailAddress` keys `^29`. `HashMap` owns its keys, but allows you to look up entries using any hashable type for which the owned key type implements `Borrow`. Since `EmailAddress` implements `Borrow<str>`, we _should_ be able to query `login_attempts` using `&str`.
+We instantiate a `HashMap` with `EmailAddress` keys :codelink[29]. `HashMap` owns its keys, but allows you to look up entries using any hashable type for which the owned key type implements `Borrow`. Since `EmailAddress` implements `Borrow<str>`, we _should_ be able to query `login_attempts` using `&str`.
 
-We create an `EmailAddress` from the raw, uppercase `&str` `^30`, and insert it into `login_attempts` with a value of `2`.
+We create an `EmailAddress` from the raw, uppercase `&str` :codelink[30], and insert it into `login_attempts` with a value of `2` :codelink[31].
 
-When we attempt to get the value back out using `raw_lowercase` as the key `^32`... armageddon. There is no corresponding entry in the `HashMap`. 😱
+When we attempt to get the value back out using `raw_lowercase` as the key :codelink[32]... armageddon. There is no corresponding entry in the `HashMap`. 😱
 
 This happens because we've violated `HashMap`'s assumption about how `Borrow` should be implemented. A type which is `Borrow<T>` must hash and compare _identically_ to `T`. Since `EmailAddress` hashes and defines equality differently to `&str`, we cannot use `&str` to look up `EmailAddress`es in a `HashMap`.
 
 Since these invariants are assumed but not enforced, I consider `Borrow` implementations "unofficially unsafe". Scrutinize any `Borrow` implementation you see in code review.
 
-> Scrutinize any `Borrow` implementation you see in code review.
+> "Scrutinize any `Borrow` implementation you see in code review."
 
 In its current form, `EmailAddress` should not implement `Borrow`. We can fix it though. If we perform the lowercasing in the `EmailAddress` constructor, there's no need to implement `PartialEq` and `Hash` manually.
 
@@ -752,7 +767,7 @@ There's plenty to keep us occupied with `unsafe`, however.
 
 `unsafe` is a signal to other developers that some invariant exists that is not enforced by the compiler, and extra care must be taken to make sure that it holds. It's also a signal to yourself, when a week has passed and you have no memory of what you were doing. A better keyword would perhaps be `check_this_carefully_youre_on_your_own`.
 
-The Rust standard library provides several examples of `unsafe` constructors that bypass costly validations. Convention is to suffix such functions with `_unchecked`. For example, on `std::string::String` we have
+The Rust standard library provides several examples of `unsafe` constructors that bypass costly validations. Convention is to suffix such functions with `_unchecked`. For example, on `std::string::String` we have:
 
 ```rust
 pub unsafe fn from_utf8_unchecked(bytes: Vec<u8>) -> String
@@ -836,10 +851,9 @@ pub fn demonstrate() {
 
 As you can see, practically _everything_ we've been doing manually up to this point can be generated by `nutype`. It's a huge time saver.
 
-@@@info
+:::aside{type=info}
 `nutype`'s support for `new_unchecked` generation and `regex` validation lies behind their respective feature flags. You can add them with `cargo add nutype --features new_unchecked regex`.
-
----
+:::
 
 Beware the corners that you choose to cut, though. `nutype`'s generated error messages are quite vague, and there's no way to override them or include additional detail:
 
@@ -849,29 +863,32 @@ EmailAddress violated the regular expression.
 
 This hampers debugging and puts the onus on the caller to wrap the newtype's associated error with additional context. It's good practice to do so regardless, but this omission feels out of place in Rust – just think about how good Rust's compiler error messages are.
 
-@@@warning
+:::aside{type=warning}
 Unlike `derive_more`, using `nutype` is a commitment. By adopting its santizers, validations and error types, you will find it quickly becomes a hard dependency that pervades your codebase and is tough to migrate away from.
 
-## This might be fine for you, but take your time and think about how `nutype` will work for your particular application and organization before adopting it.
+This might be fine for you, but take your time and think about how `nutype` will work for your particular application and organization before adopting it.
+:::
 
 Go now. I have nothing more to teach you.
+::::::
 
-# Exercises
-
-1. 🦀🦀
-   Design a newtype, `Password`, representing a user's password.
+::::::exercises
+:::exercise{difficulty=2}
+Design a newtype, `Password`, representing a user's password.
 
 The `Password` constructor should ensure that passwords submitted by users are at least 8 ASCIl characters long – any other password policy you'd like to enforce is up to you!
 
 In real-life code, we want to minimise the time that user passwords are exposed as human-readable strings. A classic mistake is logging raw passwords accidentally. With this in mind, `Password` should not hold onto the user-submitted string, but should store a hash instead.
+:::
 
-2. 🦀
-   Implement a method on `Password` allowing it to be compared with candidate password strings submitted by users during login attempts.
+:::exercise{difficulty=1}
+Implement a method on `Password` allowing it to be compared with candidate password strings submitted by users during login attempts.
 
 Your method should return a `Result`: `0k()` if `Password` matches the candidate, or an `Err` of your choice if not.
+:::
 
-3. 🦀🦀🦀
-   Company password policies change over time! Redesign `Password` so that future changes to the password policy won't require changes to the `Password` type.
+:::exercise{difficulty=3}
+Company password policies change over time! Redesign `Password` so that future changes to the password policy won't require changes to the `Password` type.
 
 For example, the password policy in question 1 is that all passwords must be at least 8 ASCIl characters long. A product manager has now had the great idea that all passwords must contain at least one emoji. 🙃
 
@@ -880,3 +897,7 @@ This means ensuring that new passwords comply with the emoji policy, but also th
 The `Password` newtype is maintainable to the extent that we can implement any new password policy without changing how the `Password` type works. That is, we must decouple the representation of the password from the implementation detail of the password policy.
 
 This will require some Rust that I haven't demonstrated in this article, so don't be afraid to think outside the box.
+:::
+::::::
+
+::discussion{title="The ultimate guide to Rust newtypes"}
