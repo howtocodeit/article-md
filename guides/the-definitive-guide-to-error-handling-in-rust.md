@@ -1,13 +1,26 @@
 ---
+slug: the-definitive-guide-to-rust-error-handling
+git_tag_base: error-handling
 title: The definitive guide to error handling in Rust
 meta_title: The Definitive Guide to Error Handling in Rust
-slug: the-definitive-guide-to-rust-error-handling
 description: Learn to model and handle any error using idiomatic Rust.
 meta_description: Learn to model and handle any error using idomatic Rust.
-color: sky
 tags: [rust, architecture, error handling]
-version: 1.1.1
+version: 1.1.2
+color: sky
+hero_image_url: https://res.cloudinary.com/dkh7xdo6x/image/upload/v1718910821/the_definitive_guide_to_rust_error_handling_0b8da55112.webp
+hero_image_alt: Illustration of a seagull attacking a crab
+og_image_url: https://res.cloudinary.com/dkh7xdo6x/image/upload/v1718914581/the_definitive_guide_to_error_handling_in_rust_og_c6e13dc427.webp
+published_at: 2024-06-20
 ---
+
+# The definitive guide to error handling in Rust
+
+::toc
+
+::::::part{numbered=false}
+
+## Introduction
 
 Are you overwhelmed by the amount of choice Rust gives us for handling errors? Confused about when to return a structured error type or a `Box<dyn Error>`? Intimidated by `Box<dyn Error + Send + Sync + 'static>`'s beefy type signature?
 
@@ -19,11 +32,14 @@ Failure cases vastly outnumber success cases. Knowing how to communicate what we
 
 Think about how great the Rust compiler's error messages are compared to other programming languages. We want users of our code to have that same reaction, whether they're on our team or using our library. We want them to be impressed when things go wrong!
 
-> Impress your users, even when things go wrong.
+> "Impress your users, even when things go wrong."
 
 Before we dazzle anyone with our error handling skills, though, let's nail the fundamentals.
 
-> Email sign-up
+::subscribe
+::::::
+
+::::::part
 
 ## Rust error handling basics
 
@@ -31,10 +47,10 @@ Before we dazzle anyone with our error handling skills, though, let's nail the f
 
 In Rust, an error is any type that implements the `std::error::Error` trait. Here's the definition:
 
-```rust src/core/error.rs
+```rust path=src/core/error.rs
 pub trait Error: Debug + Display {
     // Provided methods
-    fn source(&self) -> Option<&(dyn Error + 'static)> { ... } ^1
+    fn source(&self) -> Option<&(dyn Error + 'static)> { ... } :coderef[1]
     fn description(&self) -> &str { ... }
     fn cause(&self) -> Option<&dyn Error> { ... }
     fn provide<'a>(&'a self, request: &mut Request<'a>) { ... }
@@ -49,23 +65,20 @@ In fact, `Error::cause` and `description` are deprecated in favor of `Error::sou
 
 `Error::provide` is part of [an experimental nightly build](https://github.com/rust-lang/rust/issues/99301), so I won't discuss it here. You won't have to worry about it unless you're working with cutting-edge, unstable code.
 
-
-@@@warning
-`Error::source`
+:::aside{type=warning}
+::uh1[`Error::source`]
 
 Watch out for the default implementation of `Error::source`. It returns `None`.
 
 If you want a custom error type to return the original error that caused it, you need to provide your own implementation.
-@@@
+:::
 
-
-The return type of `Error::source` warrants closer examination `^1`, because we'll see similar types throughout this guide.
+The return type of `Error::source` warrants closer examination :codelink[1], because we'll see similar types throughout this guide.
 
 You know what `Option` is already. `&(dyn Error + 'static)` simply means "a reference to some error that may live for the whole duration of the program".
 
-
-@@@info
-Umm, technically... 🙋‍♂️
+:::aside{type=info}
+::uh1[Umm, technically... 🙋‍♂️]
 
 I frequently refer to types with the `'static` lifetime as being "static". This is convenient shorthand, but subtly incorrect.
 
@@ -74,26 +87,23 @@ They're not static in the sense of a `static` variable. They have the `'static` 
 If the compiler determines that `'static` objects don't _need_ to live as long as the program, it's free to drop them sooner.
 
 Please justify my sloppiness by making sure you're clear on the distinction.
-@@@
+:::
 
-
-The `'static` lifetime is important for error handling, because errors are often handled long after the code that causes them returns, sometimes on a different thread. 
+The `'static` lifetime is important for error handling, because errors are often handled long after the code that causes them returns, sometimes on a different thread.
 
 Good luck handling an error that's been dropped unexpectedly! Rust protects us from this scenario.
 
 You'll often see `'static` alongside `Send` and `Sync` bounds. `dyn Error + Send + Sync + 'static` describes "some error that can live as long as the program, be sent between threads by value or shared across threads by immutable reference".
 
-Error::source's return type, `&(dyn Error + 'static)`, doesn't make any promises about thread safety.
+`Error::source`\'s return type, `&(dyn Error + 'static)`, doesn't make any promises about thread safety.
 
 In general, standard library code places more relaxed bounds on dynamic errors than you'll see in the broader ecosystem and use in your own projects.
 
 This allows the widest variety of things to behave as errors, with stricter requirements left to the user's discretion.
 
-
-@@@warning
-`Error::source` returns a *non*-static reference to a static `Error`.
-@@@
-
+:::aside{type=warning}
+`Error::source` returns a _non_-static reference to a static `Error`.
+:::
 
 How do we make an `Error` type static? Simple – use only owned fields, or fields which specify the `'static` lifetime for references and trait objects.
 
@@ -134,23 +144,26 @@ The same is true for associated types in many trait definitions, such as `std::s
 
 ```rust
 pub trait FromStr: Sized {
-    type Err; ^2
+    type Err; :coderef[2]
 
     fn from_str(s: &str) -> Result<Self, Self::Err>;
 }
 ```
 
-`Err` isn't bounded by `Error` ^2!
+`Err` isn't bounded by `Error` :codelink[2]!
 
 Although you _can_ use any types in these contexts, I strongly encourage you to only use `Error` implementations.
 
 Other Rust developers will expect these things to behave like `Error`s, and we should strive to be as unsurprising as possible. That doesn't stop you from implementing additional functionality on your `Error`s, though.
 
-> Be unsurprising. Use `Error`-bounded types in most error contexts, even when not strictly required.
+> "Be unsurprising. Use `Error`-bounded types in most error contexts, even when not strictly required."
 
 There are exceptions to this rule, often within the standard library itself. Look out for the discussion of `Error::downcast` and `Box<dyn Error>` in the next section.
 
 Okay, we've nailed the essentials. Let's get into the choice that confuses most new Rust developers: should we use dynamic or statically typed errors?
+::::::
+
+::::::part
 
 ## Dynamic error handling in Rust
 
@@ -163,8 +176,9 @@ The `Error` is boxed because, as a dynamic trait object, we don't know its size 
 `Box<dyn Error>` simply says "something went wrong, check my message or my optional cause to know more".
 
 This has two key properties:
-* It's excellent for quickly communicating that something went wrong.
-* It's god-awful at providing structured data for an error handler to act on.
+
+- It's excellent for quickly communicating that something went wrong.
+- It's god-awful at providing structured data for an error handler to act on.
 
 If you would like consumers of your error – whether they're error handlers in your own application or users of your library – to be able to dynamically change their program's behavior based on the internal details of an error, don't use `Box<dyn Error>`.
 
@@ -172,25 +186,23 @@ Parsing error details from messages is fragile and hard to maintain. If you expe
 
 If you know that there's nothing useful a receiving program can do with the error, but that the message is helpful for a human debugger, then `Box<dyn Error>` and related trait objects are very convenient.
 
-> Use `Box<dyn Error>` to quickly communicate that something went wrong to a human debugger or end user.
+> "Use `Box<dyn Error>` to quickly communicate that something went wrong to a human debugger or end user."
 
 I work on an astrodynamics library for a space mission simulator funded by the European Space Agency. If someone inputs garbage data, like the time `23:59:60` on a year without leap seconds, there's really no way to recover. In this scenario, it would be perfectly reasonable to return `Box<dyn Error>` with a message that explains how silly they are.
 
 Now, we don't actually do this – that's a story for Part III on structured errors – but it is a valid Rust error handling strategy.
 
-
-@@@warning
-Boxed errors aren't errors
+:::aside{type=warning}
+::uh1[Boxed errors aren't errors]
 
 Remember when I told you to be unsurprising and put only types that implement `Error` into `Result::Err`?
 
 Well, surprise! `Box<dyn Error>` doesn't implement `Error` 🙄.
 
-You need to wrap `Box<dyn Error>` in a newtype that _does_ implement `Error` to get this functionality. My [*Ultimate Guide to Rust Newtypes*](https://www.howtocodeit.com/articles/master-hexagonal-architecture-rust) has got you covered.
+You need to wrap `Box<dyn Error>` in a newtype that _does_ implement `Error` to get this functionality. My [_Ultimate Guide to Rust Newtypes_](https://www.howtocodeit.com/articles/ultimate-guide-rust-newtypes) has got you covered.
 
 Alternatively, you can use a library like [anyhow](https://docs.rs/anyhow/latest/anyhow/) which provides such a type for you. We'll discuss this shortly.
-@@@
-
+:::
 
 #### Handling dynamic errors from other people's code
 
@@ -202,7 +214,7 @@ But say it doesn't, and you need to find out what's inside the `dyn Error`?
 
 I don't envy you this situation. It's often an indicator of bad library design.
 
-> The Laws of Thermodynamics state that the worst code is written by Other People.
+> "The Laws of Thermodynamics state that the worst code is written by Other People."
 
 Moaning about it won't help you in the moment, though. You need to downcast.
 
@@ -212,11 +224,9 @@ Did you know that you can get a concrete error type back out of a boxed `dyn Err
 
 I'm not going to get into _how_ the `std::error` crate does this, because it involves some scary `unsafe` code that has nothing to do with handling errors. That won't stop us from using it.
 
-
-@@@info
+:::aside{type=info}
 If you'd like me to walk through the `std::error` internals, leave a comment and I'll write it!
-@@@
-
+:::
 
 `dyn Error` trait objects have three methods for attempting a transformation into some concrete type `T`:
 
@@ -226,12 +236,11 @@ pub fn downcast_mut<T: Error + 'static>(&mut self) -> Option<&mut T>
 pub fn downcast_ref<T: Error + 'static>(&self) -> Option<&T>
 ```
 
-
-@@@warning
+:::aside{type=warning}
 Do you see it? The underlying error type must be `'static`, or you can't downcast to it. This is one more reason why it's good practice to design only `'static` error types.
 
 Note also that the `Box<Self>` inside the `Result::Err` returned by `downcast` doesn't implement `Error`, but `Self` does. This is one of the cases where returning a non-`Error` inside `Result::Err` makes sense.
-@@@
+:::
 
 If the `dyn Error` is of type `T`, you'll get a `T` for closer inspection. Whether that `T` is owned or borrowed depends on which method you call.
 
@@ -243,7 +252,7 @@ I don't encourage designing your errors to require downcasting to figure out wha
 
 If you choose to return a dynamic error, you are communicating that the internal structure of the error shouldn't matter to callers.
 
-> Dynamic errors communicate that their internal structure shouldn't matter to callers.
+> "Dynamic errors communicate that their internal structure shouldn't matter to callers."
 
 Forcing them to dig into your crate's error types, identify the possible culprits, downcast, and react dynamically screams "leaky implementation details".
 
@@ -253,17 +262,17 @@ This is Rust, not Go.
 
 If downcasting isn't an ideal way to handle errors, what is it good for? Let's use [Actix Web](https://actix.rs/) 4.7.0 as an example.
 
-The primary Actix error struct, `Error`, has a single field, `cause`, that holds a `Box<dyn ResponseError>`.  
+The primary Actix error struct, `Error`, has a single field, `cause`, that holds a `Box<dyn ResponseError>`.
 
-```rust actix-web src/error/error.rs
-pub struct Error {  
-    cause: Box<dyn ResponseError>,  
+```rust crate=actix-web path=src/error/error.rs
+pub struct Error {
+    cause: Box<dyn ResponseError>,
 }
 ```
 
 `ResponseError` is a trait with identical bounds to `std::error::Error`, but specifies methods to return a status code and an HTTP response body:
 
-```rust actix-web src/error/response_error.rs
+```rust crate=actix-web path=src/error/response_error.rs
 pub trait ResponseError: fmt::Debug + fmt::Display {
 	fn status_code(&self) -> StatusCode
 	fn error_response(&self) -> HttpResponse<BoxBody>
@@ -278,40 +287,36 @@ Naturally, Actix users can implement `ResponseError` for their own types too, so
 
 Actix itself doesn't care about the internal structure of any particular `ResponseError`. It just needs a way to get a status code and response body when something goes wrong. This is a scenario where dynamic errors shine.
 
-But you know who might care? *The team whose code produced the error*.
+But you know who might care? _The team whose code produced the error_.
 
 If an Actix user converts an error into Actix's opaque error format, they should reasonably expect to be able to get it out again. That's why `actix_web::error::Error` provides the `as_error` method, which downcasts to the user's original error type.
 
-```rust actix-web src/error/error.rs
+```rust crate=actix-web path=src/error/error.rs
 
 impl Error {
-	pub fn as_error<T: ResponseError + 'static>(&self) -> Option<&T> {  
-	    <dyn ResponseError>::downcast_ref(self.cause.as_ref())  
+	pub fn as_error<T: ResponseError + 'static>(&self) -> Option<&T> {
+	    <dyn ResponseError>::downcast_ref(self.cause.as_ref())
 	}
 }
 ```
 
-
-@@@info
+:::aside{type=info}
 The implementation of `ResponseError::downcast_ref` is specific to Actix. It's not the same as `<dyn std::error::Error>::downcast_ref` – these are methods of distinct trait objects. However, the concept is the same.
 
 (If you're confused by the `<dyn Trait>::method` syntax, it means that the method is defined on the dynamic trait object type, and not as part of the trait itself.)
-@@@info
-
+:::
 
 There are no leaky abstractions here, because the caller of `as_error` also owns the code that created the error in the first place.
 
 Actix never calls `downcast_ref` itself. It doesn't use `downcast_ref` to handle errors. Rather, it provides `as_error` as a means for external parties using Actix's wrapper type to inspect their own implementation details.
 
-
-@@@info
-`downcast_ref` in tests
+:::aside{type=info}
+::uh1[`downcast_ref` in tests]
 
 Ok, Actix _does_ call `downcast_ref`, but only in tests.
 
-Tests are one of the few scenarios where you *should* care that some dynamic error you're returning has a specific underlying type.
-@@@
-
+Tests are one of the few scenarios where you _should_ care that some dynamic error you're returning has a specific underlying type.
+:::
 
 ### Handling Rust errors with anyhow
 
@@ -329,28 +334,29 @@ I use anyhow often, and I find it's a better fit for applications than libraries
 
 If you return a concrete `anyhow::Error` across a crate boundary, you force the caller to depend directly on anyhow, and not everyone will want to.
 
-
-@@@warning
+:::aside{type=warning}
 Also, if you make anyhow part of your public interface, you can't upgrade to new major versions of anyhow without bumping the major version of your own crate.
-@@@
-
+:::
 
 As a general rule, return only your own or standard library error types across crate boundaries to minimize leakage of your implementation details into other people's code.
 
-> Return only your own or standard library error types across crate boundaries.
+> "Return only your own or standard library error types across crate boundaries."
 
 ### Who is your audience and what will they do with your error?
 
 I hope it's becoming clear that how you choose to handle your errors depends on two key things:
 
-* Who the audience for the error is.
-* What they should be able to do with an error you give them.
+- Who the audience for the error is.
+- What they should be able to do with an error you give them.
 
 Dynamic errors are great for consolidating a wide range of error types and returning them in a format where the only reasonable thing to do is write to output, whether that's a logger or an HTTP connection.
 
 In Part III, we'll look at structured, statically typed errors as carriers of data that we can handle programmatically. More than that though, we'll see how they serve as invaluable, innate documentation for other developers.
 
 When we understand both of these error handling styles, we'll bring them together, equipping ourselves with the knowledge to handle any kind of error that might arise, and avoid some nasty footguns.
+::::::
+
+::::::part
 
 ## Structured error handling in Rust
 
@@ -358,13 +364,11 @@ When we understand both of these error handling styles, we'll bring them togethe
 
 Knock knock. It's Hyrum's Law.
 
-
-@@@info
-[Hyrum's Law](https://www.hyrumslaw.com/)
+:::aside{type=info}
+::uh1[[Hyrum's Law](https://www.hyrumslaw.com/)]
 
 "With a sufficient number of users of an API, it does not matter what you promise in the contract: all observable behaviors of your system will be depended on by somebody."
-@@@info
-
+:::
 
 In other words, someone, somewhere _will_ end up depending on your error messages. You might not say these messages are part of your public API, but the public has access to them, and if they've got no better way to handle your errors, they're going to `if`-`else` your strings.
 
@@ -374,25 +378,23 @@ If you're thinking that this is a low-impact edge-case, consider that error stri
 
 Here's a sample from Go's `http` package:
 
-```go go src/net/http/request.go
+```go crate=go path=src/net/http/request.go
 // MaxBytesError is returned by [MaxBytesReader] when its read limit is exceeded.
 type MaxBytesError struct {
 	Limit int64
 }
 
 func (e *MaxBytesError) Error() string {
-	// Due to Hyrum's law, this text cannot be changed. ^3
+	// Due to Hyrum's law, this text cannot be changed. :coderef[3]
 	return "http: request body too large"
 }
 ```
 
-I didn't write the comment at `^3`. One of the Go team did. Good thing, too, because [here's Grafana depending on it](https://grep.app/search?q=http%3A%20request%20body%20too%20large&filter[lang][0]=Go).
+I didn't write the comment at :codelink[3]. One of the Go team did. Good thing, too, because [here's Grafana depending on it](https://grep.app/search?q=http%3A%20request%20body%20too%20large&filter[lang][0]=Go).
 
-
-@@@info
+:::aside{type=info}
 Credit goes to Abenezer Belachew for finding these examples, and [his fascinating write-up](https://abenezer.org/blog/hyrum-law-in-golang) on Hyrum's Law in Go.
-@@@info
-
+:::
 
 I'm calling out Go because it was famously unergonomic to discern whether a specific type of error was present in a long chain of errors. [Things improved](https://pkg.go.dev/errors#As) in Go 1.13, but Hyrum's Law had already had its way with the Go codebase.
 
@@ -419,13 +421,13 @@ pub struct Date {
 }
 
 impl Date {
-	pub fn new(year: i32, month: u8, day: u8) -> Result<Self, ???> { ^4
+	pub fn new(year: i32, month: u8, day: u8) -> Result<Self, ???> { :coderef[4]
 		todo!()
 	}
 }
 ```
 
-When deciding what type of error to return `^4`, start by listing all the ways someone might lose their mind when calling your function. In our case:
+When deciding what type of error to return :codelink[4], start by listing all the ways someone might lose their mind when calling your function. In our case:
 
 - The month may be outside the range `1..=12`.
 - The day may be zero, or greater than the number of days in the given month.
@@ -433,7 +435,7 @@ When deciding what type of error to return `^4`, start by listing all the ways s
 
 Expressing the constructor return type as `Result<Self, Box<dyn Error>>` is convenient – just box a string explaining the problem. Convenient, that is, until Hyrum wants his pound of flesh. We can't change these strings because we've forced people to depend on them.
 
-> Codify all possible error states in your public API.
+> "Codify all possible error states in your public API."
 
 In Rust, our weapon of choice is the `enum`:
 
@@ -470,15 +472,14 @@ impl Error for DateError {}
 
 If your users still choose to depend on your messages rather than your enum variants, that's very much a _them_ problem, not a _you_ problem, which is the best kind of problem.
 
-> Good library developers give users recipes for perfection. Some people can't cook.
+> "Good library developers give users recipes for perfection. Some people can't cook."
 
 ### Composing structured error types
 
 So far, so simple. But in real-life code, fallible functions call other fallible functions, and each failure may be represented by a different error type. We need to compose these errors into a single return type.
 
-
-@@@warning
-Umbrella errors
+:::aside{type=warning hideImage=true}
+::uh1[Umbrella errors]
 
 Some crates and modules choose to compose every error their code produces into a single public error type. `std::io::Error` is the most prominent example (you'll hear more about it later).
 
@@ -503,8 +504,7 @@ pub fn fn10() -> Result<(), Error> {}
 For each function call that results in an error, callers would have to filter out the noise of nine, unrelated error cases.
 
 As we'll soon see, you can't always eliminate noise completely, but our aim is to design error types that prioritize _relevant_ information.
-@@@warning
-
+:::
 
 Let's extend our budding time library with a new struct and a corresponding error:
 
@@ -646,7 +646,7 @@ impl UtcDateTime {
     -> Result<Self, UtcDateTimeError> {
         todo!()
     }
-    
+
     fn from_date_and_time(date: Date, time: UtcTimestamp)
     -> Result<Self, InvalidLeapSecondDateError> {
         todo!()
@@ -660,11 +660,12 @@ This approach succeeds in giving the caller only the most relevant information a
 
 Ultimately, you decide whether it's reasonable for your users to handle unrelated error variants. Trust me, they'll let you know if not. Stick to our rule of thumb and you'll be fine:
 
->  Design error types that prioritize _relevant_ information. Minimize unrelated noise.
+> "Design error types that prioritize _relevant_ information. Minimize unrelated noise."
 
 ### How to improve the ergonomics of your Rust errors
 
 Manually implementing errors is boilerplatey. In this section, we'll remove that barrier to implementing robust error types for every occasion.
+
 #### thiserror
 
 A titan among error handling crates, [thiserror](https://docs.rs/thiserror/latest/thiserror/) dramatically simplifies the process of defining and constructing situational error types.
@@ -674,22 +675,22 @@ It's the order to anyhow's dynamic chaos. Perfectly balanced, as all things shou
 Let's reimplement `UtcDateTimeError` with thiserror:
 
 ```rust
-#[derive(thiserror::Error, Debug, Clone, Copy, PartialEq, Eq)] ^5
+#[derive(thiserror::Error, Debug, Clone, Copy, PartialEq, Eq)] :coderef[5]
 pub enum UtcDateTimeError {
-    #[error(transparent)] ^6
-    Date(#[from] DateError), ^7
+    #[error(transparent)] :coderef[6]
+    Date(#[from] DateError), :coderef[7]
     #[error(transparent)]
     Time(#[from] UtcTimestampError),
-    #[error("no leap second occurs on {0}")] ^8
+    #[error("no leap second occurs on {0}")] :coderef[8]
     InvalidLeapSecond(Date),
 }
 ```
 
-First off, the manual `Display` implementation is gone, replaced by annotations. `thiserror::Error` is a derive macro that handles the legwork for us `^5`.
+First off, the manual `Display` implementation is gone, replaced by annotations. `thiserror::Error` is a derive macro that handles the legwork for us :codelink[5].
 
-At `^6`, we take advantage of the `transparent` annotation to make thiserror forward the error message from the wrapped `DateError`. This is useful when the wrapping enum doesn't have any additional context that could clarify the problem for users.
+At :codelink[6], we take advantage of the `transparent` annotation to make thiserror forward the error message from the wrapped `DateError`. This is useful when the wrapping enum doesn't have any additional context that could clarify the problem for users.
 
-Next, we generate an implementation of `From<DateError>` for `UtcDateTimeError::Date`, and `From<UtcTimestampError>` for `UtcDateTimeError::Time` `^7`. This makes constructing the `UtcDateTimeError` wrapper from its causes trivial.
+Next, we generate an implementation of `From<DateError>` for `UtcDateTimeError::Date`, and `From<UtcTimestampError>` for `UtcDateTimeError::Time` :codelink[7]. This makes constructing the `UtcDateTimeError` wrapper from its causes trivial.
 
 Best of all, `Result`s containing either `DateError` or `UtcTimestampError` will be transparently morphed into `Result<T, UtcDateTimeError>` when returned with the try operator, `?`:
 
@@ -699,13 +700,11 @@ fn some_utc_datetime_func() -> Result<(), UtcDateTimeError> {
 }
 ```
 
-Unlike `DateError` and `UtcTimestampError`, `UtcDateTimeError::InvalidLeapSecond` has no `Display` implementation of its own, so the final step is to generate one at `^8`, interpolating the wrapped `Date`.
+Unlike `DateError` and `UtcTimestampError`, `UtcDateTimeError::InvalidLeapSecond` has no `Display` implementation of its own, so the final step is to generate one at :codelink[8], interpolating the wrapped `Date`.
 
-
-@@@info
+:::aside{type=info}
 If you'd prefer not to take a dependency on thiserror, you can still get try-operator ergonomics by manually implementing `From` for your error as you would with any other type.
-@@@info
-
+:::
 
 ### Structured error handling examples from the Rust ecosystem
 
@@ -715,9 +714,9 @@ Don't take my word for it. Here are prime examples of structured errors from two
 
 [tracing](https://tracing.rs/tracing/) is the number-one framework for instrumenting your Rust applications. Collecting the events you emit requires a collector – some implementation of `tracing_core::collect::Collect`. As the name suggests, there can be only one global default collector. What happens if you try to set it twice?
 
-```rust tracing tracing-core/src/dispatch.rs
+```rust crate=tracing path=tracing-core/src/dispatch.rs
 /// Returned if setting the global dispatcher fails.
-pub struct SetGlobalDefaultError { ^9
+pub struct SetGlobalDefaultError { :coderef[9]
     _no_construct: (),
 }
 
@@ -744,26 +743,26 @@ impl fmt::Display for SetGlobalDefaultError {
 impl error::Error for SetGlobalDefaultError {}
 ```
 
-Since there's only one way setting the global default can fail – when it's already been set – this is neatly represented by an empty struct: `SetGlobalDefaultError` `^9`.
+Since there's only one way setting the global default can fail – when it's already been set – this is neatly represented by an empty struct: `SetGlobalDefaultError` :codelink[9].
 
 #### wgpu
 
 Here's an all-singing, all-dancing example from [wgpu](), a cross-platform graphics API based on the WebGPU standard. Creating compute shader pipelines is fraught with danger:
 
-```rust wgpu wgpu-core/src/pipeline.rs
+```rust crate=wgpu path=wgpu-core/src/pipeline.rs
 #[derive(Clone, Debug, Error)]
-#[non_exhaustive] ^10
+#[non_exhaustive] :coderef[10]
 pub enum CreateComputePipelineError {
     #[error(transparent)]
     Device(#[from] DeviceError),
     #[error("Unable to derive an implicit layout")]
-    Implicit(#[from] ImplicitLayoutError), ^11
+    Implicit(#[from] ImplicitLayoutError), :coderef[11]
     #[error("Error matching shader requirements against the pipeline")]
     Stage(#[from] validation::StageError),
     #[error("Internal error: {0}")]
     Internal(String),
     #[error("Pipeline constant error: {0}")]
-    PipelineConstants(String), ^12
+    PipelineConstants(String), :coderef[12]
     #[error(transparent)]
     MissingDownlevelFlags(#[from] MissingDownlevelFlags),
     #[error(transparent)]
@@ -771,21 +770,19 @@ pub enum CreateComputePipelineError {
 }
 ```
 
-`CreateComputePipelineError` showcases a thiserror-derived enum error. It includes variants composed from granular, low-level errors `^11`, and new errors exclusive to the creation of the pipeline `^12`.
+`CreateComputePipelineError` showcases a thiserror-derived enum error. It includes variants composed from granular, low-level errors :codelink[11], and new errors exclusive to the creation of the pipeline :codelink[12].
 
 If you'd like to see more examples from `wgpu`, which adopts the maximalist approach of having distinct error types for each operation, `wgpu_core/src/ray_tracing.rs` [contains several error definitions](https://github.com/gfx-rs/wgpu/blob/1ea5498038b2fd0392bd6cbd81ec71b2438e5c95/wgpu-core/src/ray_tracing.rs#L1), including one 27-variant monster!
 
+:::aside{type=info}
+::uh1[Non-exhaustive errors]
 
-@@@info
-Non-exhaustive errors
-
-Note that `CreateComputePipelineError` is marked `non_exhaustive` `^10`. This is the wgpu devs saying "we reserve the right for other things to go wrong in future".
+Note that `CreateComputePipelineError` is marked `non_exhaustive` :codelink[10]. This is the wgpu devs saying "we reserve the right for other things to go wrong in future".
 
 When you match a non-exhaustive enum error, rustc will force you to add a catch-all pattern. This will mop up any new variants that you don't explicitly match.
 
 If the devs hadn't done this, adding a new error variant would be a breaking change.
-@@@info
-
+:::
 
 ### `std::io::Error`, Rust's most challenging error type
 
@@ -795,7 +792,7 @@ We'll scavenge what looks tasty, and leave the bits that look off. Like vultures
 
 Here's the implementation (for clarity, I've left out the [bit-packing optimization](https://stdrs.dev/nightly/x86_64-unknown-linux-gnu/src/std/io/error/repr_bitpacked.rs.html) used on 64-bit systems):
 
-```rust rust library/std/src/io/error.rs|repr_unpacked.rs
+```rust crate=rust path=library/std/src/io/error.rs|repr_unpacked.rs
 pub struct Error {
     repr: Repr,
 }
@@ -809,7 +806,7 @@ struct Custom {
     error: Box<dyn error::Error + Send + Sync>,
 }
 
-enum ErrorData<C> { ^13
+enum ErrorData<C> { :coderef[13]
     Os(RawOsError),
     Simple(ErrorKind),
     SimpleMessage(&'static SimpleMessage),
@@ -819,64 +816,65 @@ enum ErrorData<C> { ^13
 
 Aha! Four error representations wearing a trench coat! And they would have gotten away with it if it wasn't for us meddling crabs.
 
-`ErrorData` specifies four, broad forms of error `^13`:
--  `Os` wraps error codes returned by the operating system. `RawOsError` is a `usize` alias.
+`ErrorData` specifies four, broad forms of error :codelink[13]:
+
+- `Os` wraps error codes returned by the operating system. `RawOsError` is a `usize` alias.
 - `SimpleMessage` is, simply, an error message.
 - `Simple` wraps an `ErrorKind` – another enum, which we'll discuss imminently.
 - `Custom` is a catch-all variant for anything that isn't covered by the other three. Specifically, `std::io::Error` uses an `ErrorData<Box<Custom>>`, meaning `ErrorData::Custom` holds a `Box<Custom>`. `Custom` itself combines an `ErrorKind` and a boxed, dynamic error. Capeesh?
 
 I won't reproduce `ErrorKind` in full – it has more variants than Covid. Here's a sample of the many, many ways IO goes wrong:
 
-```rust rust library/std/src/io/error.rs
+```rust crate=rust path=library/std/src/io/error.rs
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[non_exhaustive]
 pub enum ErrorKind {
 	// ...
-	
+
     #[stable(feature = "rust1", since = "1.0.0")]
-    ConnectionRefused, ^14
+    ConnectionRefused, :coderef[14]
     #[stable(feature = "rust1", since = "1.0.0")]
     ConnectionReset,
-    
+
     // ...
-    
+
     #[unstable(feature = "io_error_more", issue = "86442")]
-    FilesystemQuotaExceeded, ^15
+    FilesystemQuotaExceeded, :coderef[15]
     #[stable(feature = "io_error_a_bit_more", since = "1.83.0")]
     FileTooLarge,
 
 	// ...
 
     #[stable(feature = "io_error_a_bit_more", since = "1.83.0")]
-    ArgumentListTooLong, ^16
+    ArgumentListTooLong, :coderef[16]
     #[stable(feature = "rust1", since = "1.0.0")]
     Interrupted,
 
 	// ...
 
     #[stable(feature = "rust1", since = "1.0.0")]
-    Other, ^17
-    #[unstable(feature = "io_error_uncategorized", issue = "none")] ^18
-    #[doc(hidden)] ^19
+    Other, :coderef[17]
+    #[unstable(feature = "io_error_uncategorized", issue = "none")] :coderef[18]
+    #[doc(hidden)] :coderef[19]
     Uncategorized,
 }
 ```
 
-`ErrorKind` is a smash-up of network failures `^14`, filesystem errors `^15` and OS process complaints `^16`. There are write-only error cases, like `ReadOnlyFilesystem`, in an enum that's shared by read operations. This is not the tight error definition we're used to.
+`ErrorKind` is a smash-up of network failures :codelink[14], filesystem errors :codelink[15] and OS process complaints :codelink[16]. There are write-only error cases, like `ReadOnlyFilesystem`, in an enum that's shared by read operations. This is not the tight error definition we're used to.
 
 Down in the basement of your program, `std::io` doesn't know what sort of operation you're attempting. It shovels bytes into the OS via the [`Write`](https://doc.rust-lang.org/std/io/trait.Write.html) trait, and gets bytes out via the [`Read`](https://doc.rust-lang.org/std/io/trait.Read.html) trait. `std::io::Error` is baked into their definitions.
 
 What are the consequences? Since `Read` and `Write` depend on `std::io::Error`, these traits must live in `std`, not `core`. `std::io::Error` presumes the presence of an operating system. But if you're running `no_std`, there's a chance you _are_ the operating system! `no_std` programs have to reinvent these traits without this dependency.
 
-> `no_std` programs have to reinvent `Read` and `Write` without `std::io::Error`.
+> "`no_std` programs have to reinvent `Read` and `Write` without `std::io::Error`."
 
 There's strangeness for `std` programs too. `Read` and `Write` are the basis for higher-level readers and writers. If you design an HTTP connection, a database connection, a packet library, a logger, or anything else with sophisticated IO, odds are that you'll define specialized readers and writers based on lower-level implementations of `Read` and `Write`.
 
 Since specialist implementations must return `std::io::Error` to satisfy the IO trait signatures, the Rust devs had to give `std::io::Error` a way to represent errors that `std::io` doesn't know about.
 
-That's what `Custom` is for.  It's built from any `ErrorKind` variant – probably `Other` – and a `Box<dyn Error + Send + Sync>`. In other words, custom readers and writers are forced to represent their custom errors dynamically. In this mirror world, the more specialized the use case, the more vague `std::io::Error` becomes.
+That's what `Custom` is for. It's built from any `ErrorKind` variant – probably `Other` – and a `Box<dyn Error + Send + Sync>`. In other words, custom readers and writers are forced to represent their custom errors dynamically. In this mirror world, the more specialized the use case, the more vague `std::io::Error` becomes.
 
-> The more specialized the use case, the more vague `std::io::Error` becomes.
+> "The more specialized the use case, the more vague `std::io::Error` becomes."
 
 #### What's up with `Other` and `Uncategorized`?
 
@@ -888,7 +886,7 @@ That link directs to a Rust language tracking issue, in which a number of Rust N
 
 Hyrum's Law.
 
-`Other` `^17` was formerly a catch-all variant not just for Rust users, but for the Rust standard library itself. For example, there is no `ErrorKind` representing a failure to write to `stdout`. Instead, a message describing the problem [was bundled into `Other`](https://github.com/ijackson/rust/blob/cdbe2888979bb8797b05f0d58a6f6e60753983d2/library/std/src/sys/hermit/stdio.rs#L43).
+`Other` :codelink[17] was formerly a catch-all variant not just for Rust users, but for the Rust standard library itself. For example, there is no `ErrorKind` representing a failure to write to `stdout`. Instead, a message describing the problem [was bundled into `Other`](https://github.com/ijackson/rust/blob/cdbe2888979bb8797b05f0d58a6f6e60753983d2/library/std/src/sys/hermit/stdio.rs#L43).
 
 Did the `ErrorKind` documentation explicitly warn users that this was _not_ a stable contract, and that these "other" errors may be replaced as time went on? Yes, it did.
 
@@ -898,13 +896,11 @@ When these vague errors became bespoke `ErrorKind` variants, code that expected 
 
 Enter `Uncategorized`. Reason can't stop developers from depending on implicit behavior, but rustc can.
 
-`Uncategorized` is the new home for errors the Rust team hasn't figured out what to do with. The standard library [no longer assigns errors to `Other`](https://github.com/ijackson/rust/blob/333d42de2ce51ec5c3719b425c89c3075ad1865e/library/std/src/sys/hermit/stdio.rs). Since `Uncategorized` is marked as `unstable` `^18`, you can't match it without enabling an unstable feature yourself – you know what you're getting yourself in for.
+`Uncategorized` is the new home for errors the Rust team hasn't figured out what to do with. The standard library [no longer assigns errors to `Other`](https://github.com/ijackson/rust/blob/333d42de2ce51ec5c3719b425c89c3075ad1865e/library/std/src/sys/hermit/stdio.rs). Since `Uncategorized` is marked as `unstable` :codelink[18], you can't match it without enabling an unstable feature yourself – you know what you're getting yourself in for.
 
-
-@@@info
-For good measure, `Uncategorized` is also hidden from the docs `^19`, but that's the Hyrum's Law equivalent of trying to hold back the tide.
-@@@info
-
+:::aside{type=info}
+For good measure, `Uncategorized` is also hidden from the docs :codelink[19], but that's the Hyrum's Law equivalent of trying to hold back the tide.
+:::
 
 That's `std::io::Error`. Pros: enum-based variants for every error kind Rust knows about. A valiant, workable solution to an unforgiving problem. Cons: everything else.
 
@@ -921,3 +917,13 @@ Choose how to represent each error on a case-by-case basis, guided by what you e
 And keep an eye out for Hyrum.
 
 He hunts at night.
+::::::
+
+::::::part
+
+## Error handling in exceptional circumstances: `panic!`, `no_std` and FFIs
+
+_Let me cook._
+::::::
+
+::discussion{title="The definitive guide to error handling in Rust"}
