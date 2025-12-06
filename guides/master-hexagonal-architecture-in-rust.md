@@ -1,13 +1,25 @@
 ---
+slug: master-hexagonal-architecture-in-rust
+git_tag_base: master-hexagonal-architecture-in-rust
 title: Master hexagonal architecture in Rust
 meta_title: Master Hexagonal Architecture in Rust
-slug: master-hexagonal-architecture-rust
 description: Take the pain out of scaling. This guide has everything you need to write flexible, future-proof Rust applications using hexagonal architecture.
 meta_description: Everything you need to write flexible, future-proof Rust applications using hexagonal architecture.
-color: hornet
 tags: [rust, architecture, type-driven design]
-version: 1.1.3
+version: 1.1.4
+color: hornet
+hero_image_url: https://res.cloudinary.com/dkh7xdo6x/image/upload/v1717695236/honeybee_300x300_1c85e8f99e.webp
+hero_image_alt: Illustration of a bee
+og_image_url: https://res.cloudinary.com/dkh7xdo6x/image/upload/v1717697346/hexagonal_architecture_og_f851b96907.jpg
 ---
+
+# Master hexagonal architecture in Rust
+
+::toc
+
+:::part{numbered=false}
+
+## Introduction
 
 Hexagonal Architecture. You've heard the buzzwords. You've wondered, "why
 hexagons?". You think domain-driven design is involved, somehow. Your company
@@ -42,7 +54,12 @@ principles of hexagonal architecture are not confined to web apps – any
 application that receives external input or makes requests to the outside world
 can benefit.
 
-Let's get into it.
+Here's how to code it.
+::::::
+
+::subscribe
+
+::::::part
 
 ## Anatomy of a bad Rust application
 
@@ -67,7 +84,7 @@ annual bonus.
 
 Here's my take on `main.rs` for such a program:
 
-```rust src/bin/server/main.rs
+```rust path=src/bin/server/main.rs
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let config = Config::from_env()?;
@@ -78,10 +95,10 @@ async fn main() -> anyhow::Result<()> {
         |request: &axum::extract::Request<_>| {
             let uri = request.uri().to_string();
             tracing::info_span!("http_request", method = ?request.method(), uri)
-        },  ^1
+        },  :coderef[1]
     );
 
-    let sqlite = SqlitePool::connect_with(    ^2
+    let sqlite = SqlitePool::connect_with(    :coderef[2]
         SqliteConnectOptions::from_str(&config.database_url)
             .with_context(|| format!("invalid database path {}", &config.database_url))?
             .pragma("foreign_keys", "ON"),
@@ -90,9 +107,9 @@ async fn main() -> anyhow::Result<()> {
     .with_context(|| format!("failed to open database at {}", &config.database_url))?;
 
     let app_state = AppState {
-        sqlite: Arc::new(sqlite),  ^3
+        sqlite: Arc::new(sqlite),  :coderef[3]
     };
-    let router = axum::Router::new()   ^4
+    let router = axum::Router::new()   :coderef[4]
         .route("/authors", post(create_author))
         .layer(trace_layer)
         .with_state(app_state);
@@ -123,27 +140,27 @@ Even so, this is fat `main` function. If you're tempted to say that it could be
 improved by moving the application setup logic to a dedicated `setup` module,
 you're not wrong – but your priorities are. There is much greater evil here.
 
-Firstly, why is `main` configuring HTTP middleware `^1`? In fact, it looks like
+Firstly, why is `main` configuring HTTP middleware :codelink[1]? In fact, it looks like
 `main` needs an intimate understanding of the whole axum crate just to get the
-server running `^4`! axum isn't even part of our application – it's a
+server running :codelink[4]! axum isn't even part of our application – it's a
 third-party dependency that has escaped containment.
 
 You'd have the same problem if this code lived in a `setup` module. It's not the
 location of the setup, but the failure to encapsulate and abstract dependencies
 that makes this code hard to maintain.
 
-> The failure to encapsulate and abstract dependencies makes this code hard to
-> maintain.
+> "The failure to encapsulate and abstract dependencies makes this code hard to
+> maintain."
 
 If you ever change your HTTP server, `main` has to change too. To add
 middleware, you modify `main`. Major version changes in axum could force you to
 change `main`.
 
-We have the same issue with the database at `^2`, where we shackle our `main`
+We have the same issue with the database at :codelink[2], where we shackle our `main`
 function to one particular, third-party implementation of an Sqlite client.
 Next, we make things _so_ much worse by flowing this concrete representation
 – an imported struct entirely outside our control – through the _entire
-application_. See how we pass `sqlite` into axum as a field of `AppState` `^3`
+application_. See how we pass `sqlite` into axum as a field of `AppState` :codelink[3]
 to make it accessible to our HTTP handlers?
 
 To change your database client – not even to change the kind of database, just
@@ -155,25 +172,25 @@ This isn't a leaky abstraction, it's a broken dam.
 Take a moment to recover, because I'm about to show you the `create_author`
 handler, and it's a bloodbath.
 
-```rust src/lib/routes.rs
+```rust path=src/lib/routes.rs
 pub async fn create_author(
-    State(state): State<AppState>,  ^5
+    State(state): State<AppState>,  :coderef[5]
     Json(author): Json<CreateAuthorRequestBody>,
 ) -> Result<ApiSuccess<CreateAuthorResponseData>, ApiError> {
-    if author.name.is_empty() {  ^6
+    if author.name.is_empty() {  :coderef[6]
         return Err(ApiError::UnprocessableEntity(
             "author name cannot be empty".to_string(),
         ));
     }
 
-    let mut tx = state  ^7
+    let mut tx = state  :coderef[7]
         .sqlite
         .begin()
         .await
         .context("failed to start transaction")?;
 
     let author_id = save_author(&mut tx, &author.name).await.map_err(|e| {
-        if is_unique_constraint_violation(&e) {  ^8
+        if is_unique_constraint_violation(&e) {  :coderef[8]
             ApiError::UnprocessableEntity(format!(
                 "author with name {} already exists",
                 &author.name
@@ -197,12 +214,12 @@ pub async fn create_author(
 Stay with me! Suppress the urge to vomit. We'll get through this together and
 come out as better Rust devs.
 
-Look, there's that hard dependency on sqlx `^5`, polluting the system on cue 🙄.
-And holy good god, our HTTP handler is orchestrating database transactions `^7`.
+Look, there's that hard dependency on sqlx :codelink[5], polluting the system on cue 🙄.
+And holy good god, our HTTP handler is orchestrating database transactions :codelink[7].
 An HTTP handler shouldn't even know what a database _is_, but this one knows
 SQL!
 
-```rust src/lib/routes.rs
+```rust path=src/lib/routes.rs
 async fn save_author(tx: &mut Transaction<'_, Sqlite>, name: &str) -> Result<Uuid, sqlx::Error> {
     let id = Uuid::new_v4();
     let id_as_string = id.to_string();
@@ -218,9 +235,9 @@ async fn save_author(tx: &mut Transaction<'_, Sqlite>, name: &str) -> Result<Uui
 
 And the horrifying consequence of this is that the handler also has to
 understand the specific error type of the database crate – and the database
-itself `^8`:
+itself :codelink[8]:
 
-```rust src/lib/routes.rs
+```rust path=src/lib/routes.rs
 const UNIQUE_CONSTRAINT_VIOLATION_CODE: &str = "2067";
 
 fn is_unique_constraint_violation(err: &sqlx::Error) -> bool {
@@ -239,14 +256,14 @@ fn is_unique_constraint_violation(err: &sqlx::Error) -> bool {
 Refactoring this kind of code is miserable, you get that. But here's the kicker
 – unit testing this kind of code is impossible.
 
-> Unit testing this code is impossible.
+> "Unit testing this code is impossible."
 
 You cannot call this handler without a real, concrete instance of an sqlx SQLite
 connection pool.
 
 And don't come at me with "it's fine, we can still integration test it", because
 that's not enough. Look at how complex the error handling is. We've got inline
-request body validation `^6`, transaction management `^7`, and sqlx errors `^8`
+request body validation :codelink[6], transaction management :codelink[7], and sqlx errors :codelink[8]
 in one function.
 
 Integration tests are slow and expensive – they aren't suited to exhaustive
@@ -270,15 +287,13 @@ In these situations, consider the few alternatives carefully, and accept that
 changing your mind later will mean a painful refactor. Most of all, look for
 evidence of widespread community adoption and support.
 
-
-@@@info
+:::aside{type=info}
 `anyhow` is an example of a less grand crate that is nonetheless allowed
 to flow freely through many Rust apps.
 
 Its utility is so general, and its community adoption so extensive, that the
 odds of ever needing to replace it are slim.
-@@@
-
+:::
 
 HTTP packages, database clients, message queues, etc. do not fall into this
 category. Teams opt to change these dependencies regularly, for reasons
@@ -297,6 +312,9 @@ Hexagonal architecture brings order to chaos and flexibility to fragile programs
 by making it easy to create modular applications where connections to the
 outside world always adhere to the most important API of all: your business
 domain.
+::::::
+
+::::::part
 
 ## Separation of concerns, the Rust way
 
@@ -314,15 +332,13 @@ I've omitted details like module names and folder structure for simplicity.
 Don't worry, though. Before this guide is over, you'll have a complete
 application template you can reuse across all your projects.
 
-
-@@@info
-Really? All of my projects?
+:::aside{type=info}
+::uh1[Really? All of my projects?]
 
 You're right to raise an eyebrow. I'm playing fast and loose with the word
 "all", but rest assured that we'll have had a full and frank discussion about
 the most appropriate uses of hexagonal architecture by the time we're done.
-@@@
-
+:::
 
 ### The repository pattern in Rust
 
@@ -330,9 +346,8 @@ The worst part of the Very Bad Application is undoubtedly having an HTTP handler
 making direct queries to an SQL database. This is a plus-sized violation of the
 Single Responsibility Principle.
 
-
-@@@info
-The Single Responsibility Principle
+:::aside{type=info}
+::uh1[The Single Responsibility Principle]
 
 Each unit of a program – from modules to functions to structs – should have at
 most one responsibility.
@@ -340,8 +355,7 @@ most one responsibility.
 There are some specialist use cases where this is impractical to uphold, but
 it's so often correct that I consider it the most useful catchphrase to come out
 of the object-oriented era.
-@@@
-
+:::
 
 Code that understands the HTTP request-response cycle shouldn't also understand
 SQL. Code that needs a database doesn't need to know how that database is
@@ -356,8 +370,8 @@ All of these are valid data stores. If you overcommit by hard-wiring any one of
 them into your system, you guarantee future pain when you can least afford it –
 when you need to scale.
 
-> Hard-wiring a database into your system guarantees pain when you need to
-> scale.
+> "Hard-wiring a database into your system guarantees pain when you need to
+> scale."
 
 Repository is the general term for "some store of data". Our first step is to
 move the `create_author` handler away from SQL and towards the abstract concept
@@ -382,17 +396,17 @@ pub trait AuthorRepository {
 	///   already exists.
 	fn create_author(
 	    &self,
-	    req: &CreateAuthorRequest,  ^9
-	) -> Result<Author, CreateAuthorError>>; ^10
+	    req: &CreateAuthorRequest,  :coderef[9]
+	) -> Result<Author, CreateAuthorError>>; :coderef[10]
 }
 ```
 
 An `AuthorRepository` is some store of author data with (currently) one method:
 `create_author`.
 
-`create_author` takes a reference to the data required to create an author `^9`,
+`create_author` takes a reference to the data required to create an author :codelink[9],
 and returns a `Result` containing either a saved `Author`, or a specific error
-type describing everything that might go wrong while creating an author `^10`.
+type describing everything that might go wrong while creating an author :codelink[10].
 Right now, that's just the existence of duplicate authors, but we'll come back
 to error handling.
 
@@ -406,9 +420,8 @@ source of truth for how every implementation behaves. Callers no longer have to
 think about SQL or message queues, they just invoke this API, and the underlying
 adapter does all the hard work.
 
-
-@@@info
-Business logic
+:::aside{type=info}
+::uh1[Business logic]
 
 "Business logic" and "domain logic" are interchangeable terms that I'll be using
 a lot, so let's define them.
@@ -421,8 +434,7 @@ special. Almost every app needs points of contact with the outside world.
 
 Your business logic is how you compose these everyday implementation details and
 make them more than the sum of their parts.
-@@@
-
+:::
 
 ### Domain models
 
@@ -435,7 +447,7 @@ business logic. Nothing else will do. Let's see some definitions:
 ```rust
 /// A uniquely identifiable author of blog posts.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Author {  ^11
+pub struct Author {  :coderef[11]
     id: Uuid,
     name: AuthorName,
 }
@@ -478,7 +490,7 @@ impl AuthorName {
 
 /// The fields required by the domain to create an [Author].
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, From)]
-pub struct CreateAuthorRequest {  ^12
+pub struct CreateAuthorRequest {  :coderef[12]
     name: AuthorName,
 }
 
@@ -487,7 +499,7 @@ impl CreateAuthorRequest {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
-pub enum CreateAuthorError {  ^13
+pub enum CreateAuthorError {  :coderef[13]
     #[error("author with name {name} already exists")]
     Duplicate { name: AuthorName },
     // to be extended as new error scenarios are introduced
@@ -504,7 +516,7 @@ If you don't construct a valid `CreateAuthorRequest` from the raw parts you've
 received over the wire (or from that intern), you can't call
 `AuthorRepository::create_author`. Sorry, jog on. 🤷
 
-> Validations should be defined by the domain, not request handlers.
+> "Validations should be defined by the domain, not request handlers."
 
 This pattern of newtyping should be familiar if you've read [_The Ultimate Guide
 to Rust
@@ -532,9 +544,8 @@ And this has immediate practical benefits:
 - Testability skyrockets, because any domain trait, like `AuthorRepository` can
   be mocked. We'll see this in action shortly.
 
-
-@@@warning
-Don't be abSerde
+:::aside{type=warning}
+::uh1[Don't be abSerde]
 
 Note the absence of `serde::Serialize` and `Deserialize` annotations on the
 domain models. Don't fall into a common trap here.
@@ -554,10 +565,9 @@ won't necessarily result in a tight coupling between domain and adapter.
 If the second point isn't true, however, you give your adapters the power to
 create invalid domain models from raw data, since they can use Serde to bypass
 your constructors.
-@@@
+:::
 
-
-Why do we distinguish `CreateAuthorRequest` `^12` from `Author` `^11`? Surely we
+Why do we distinguish `CreateAuthorRequest` :codelink[12] from `Author` :codelink[11]? Surely we
 could represent both saved and unsaved `Author`s as
 
 ```rust
@@ -603,14 +613,14 @@ look like duplicative boilerplate to begin with, don't be fooled. Your
 application will change. Your API _will_ diverge from your domain
 representation.
 
-> Hexagonal architecture is about building for change.
+> "Hexagonal architecture is about building for change."
 
 By modeling persistent entities separately from requests to create them, you
 encode an incredible capacity to scale.
 
 ### Error types and hexagonal architecture
 
-Let's zoom in on `CreateAuthorError` `^13`. It reveals some important properties
+Let's zoom in on `CreateAuthorError` :codelink[13]. It reveals some important properties
 of domain models and traits.
 
 `CreateAuthorError` doesn't define failure cases such as an input name being
@@ -625,9 +635,8 @@ adapters. There are two categories: violations of business rules, like
 attempting to create a duplicate author, and unexpected errors that the domain
 doesn't know how to handle.
 
-
-@@@info
-Exhaustive vs. non-exhaustive enums
+:::aside{type=info}
+::uh1[Exhaustive vs. non-exhaustive enums]
 
 Since you have full control of the application and all the sites where
 `CreateAuthorError` is handled, there's no need to mark `CreateAuthorError` as
@@ -642,8 +651,7 @@ match expressions.
 
 Otherwise, any change to the number or structure of enum variants would be
 breaking, and require amajor version bump.
-@@@
-
+:::
 
 Much as our domain would like to pretend the real world doesn't
 exist, *many* things can go wrong when calling a database. We could fail to
@@ -665,8 +673,8 @@ since it includes a backtrace for any error it wraps.
 As a result (no pun intended), `CreateAuthorError` is a complete description of
 everything that can go wrong when creating an author.
 
-> `CreateAuthorError` is a complete description of everything that can go wrong
-> when creating an author.
+> "`CreateAuthorError` is a complete description of everything that can go wrong
+> when creating an author."
 
 This is incredible news for callers of domain traits – immensely powerful. Any
 code calling a port has a complete description of every error scenario it's
@@ -690,10 +698,10 @@ pub struct Sqlite {
 }
 
 impl Sqlite {
-    pub async fn new(path: &str) -> anyhow::Result<Sqlite> {  ^14
+    pub async fn new(path: &str) -> anyhow::Result<Sqlite> {  :coderef[14]
         let pool = sqlx::SqlitePool::connect_with(
             sqlx::sqlite::SqliteConnectOptions::from_str(path)
-                .with_context(|| format!("invalid database path {}", path))?  ^15
+                .with_context(|| format!("invalid database path {}", path))?  :coderef[15]
                 .pragma("foreign_keys", "ON"),
         )
         .await
@@ -706,11 +714,11 @@ impl Sqlite {
 
 Wrapping types like `sqlx::SqlitePool` has the benefit of encapsulating a
 third-party dependencies within code of our own design. Remember the Very Bad
-Application's leaky `main` function `^1`? Wrapping external libraries and
+Application's leaky `main` function :codelink[1]? Wrapping external libraries and
 exposing only the functionality your application needs is how we plug the leaks.
 
-> Wrap external libraries and expose only the functionality your application
-> requires.
+> "Wrap external libraries and expose only the functionality your application
+> requires."
 
 Again, don't worry about module structure for now. Get comfortable with the type
 definitions, then we'll assemble the pieces.
@@ -727,11 +735,10 @@ just that one did.
 At the point where most applications are instantiating databases, the only
 reasonable thing to do with an error is log it to `stdout` or some log
 aggregation service. `Sqlite::new` simply wraps any sqlx error it encounters
-with some extra context `^15`.
+with some extra context :codelink[15].
 
-
-@@@info
-Add context to opaque errors
+:::aside{type=info}
+::uh1[Add context to opaque errors]
 
 It's good practice to add supporting context to opaque error types
 like `anyhow::Error`. Your code probably knows something useful that the library
@@ -739,31 +746,30 @@ it called doesn't.
 
 Sometimes, adding more context won't make an error easier to debug. When in
 doubt, however, choose to give too much information over too little.
-@@@
-
+:::
 
 Now, the exciting stuff – the implementation of `AuthorRepository`:
 
 ```rust
 impl AuthorRepository for Sqlite {
     async fn create_author(&self, req: &CreateAuthorRequest) -> Result<Author, CreateAuthorError> {
-        let mut tx = self  ^16
+        let mut tx = self  :coderef[16]
             .pool
             .begin()
             .await
             .context("failed to start SQLite transaction")?;
 
-        let author_id = self.save_author(&mut tx, req.name()) ^17
+        let author_id = self.save_author(&mut tx, req.name()) :coderef[17]
 	        .await
 	        .map_err(|e| {
-	            if is_unique_constraint_violation(&e) {  ^18
+	            if is_unique_constraint_violation(&e) {  :coderef[18]
 	                CreateAuthorError::Duplicate {
 	                    name: req.name().clone(),
 	                }
 	            } else {
 	                anyhow!(e)
                         .context(format!("failed to save author with name {:?}", req.name()))
-                        .into() ^19
+                        .into() :coderef[19]
 	            }
 	        })?;
 
@@ -790,10 +796,10 @@ the _how_ is visible to code calling a trait method.
 
 `Sqlite`'s implementation of `AuthorRepository` knows all about SQLite error
 codes, and transforms any error corresponding to a duplicate author into the
-domain's preferred representation `^18`.
+domain's preferred representation :codelink[18].
 
 Of course, `Sqlite`, not being part of the domain's Garden of Eden, may
-encounter an error that the domain can't do much with `^19`.
+encounter an error that the domain can't do much with :codelink[19].
 
 This is a `500 Internal Server Error` in the making, but repositories shouldn't
 know about HTTP status codes. We need to pass it back up the chain in the form
@@ -814,7 +820,7 @@ However, thanks to [a comment from
 matta](https://www.howtocodeit.com/articles/master-hexagonal-architecture-rust#discussion) and
 a horrible realization I had in the shower, I've reversed my position.
 
-> Don't panic in response to unexpected errors.
+> "Don't panic in response to unexpected errors."
 
 Whether or not you consider the database falling over a recoverable error, there
 are two incontrovertible reasons not to panic:
@@ -830,7 +836,7 @@ are two incontrovertible reasons not to panic:
 
 What about retry handling? Good question. We'll cover that in [Part V: *Advanced
 Hexagonal Architecture in
-Rust*](#advanced-techniques-in-hexagonal-architecture).
+Rust*](#advanced-hexagonal-architecture-in-rust).
 
 ### Everything but the kitchen async
 
@@ -872,12 +878,12 @@ pub trait AuthorRepository {
 	fn create_author(
         &self,
         req: &CreateAuthorRequest,
-    ) -> impl Future<Output = Result<Author, CreateAuthorError>> + Send; ^20
+    ) -> impl Future<Output = Result<Author, CreateAuthorError>> + Send; :coderef[20]
 }
 ```
 
 Since our `Author` and `CreateAuthorError` are both `Send`, a `Future` that
-wraps them can be too `^20`.
+wraps them can be too :codelink[20].
 
 But what good is a repository if its methods return thread-safe `Future`s, but
 the repo itself is bound to a single thread? Let's ensure `AuthorRepository` is
@@ -955,7 +961,7 @@ Web](https://actix.rs/).
 #[derive(Debug, Clone)]
 /// The application state available to all request handlers.
 struct AppState<AR: AuthorRepository> {
-    author_repo: Arc<AR>,  ^21
+    author_repo: Arc<AR>,  :coderef[21]
 }
 ```
 
@@ -975,16 +981,16 @@ handler!
 
 ```rust
 pub async fn create_author<AR: AuthorRepository>(
-    State(state): State<AppState<AR>>, ^22
+    State(state): State<AppState<AR>>, :coderef[22]
     Json(body): Json<CreateAuthorHttpRequestBody>,
 ) -> Result<ApiSuccess<CreateAuthorResponseData>, ApiError> {
-	let domain_req = body.try_into_domain()?; ^23
+	let domain_req = body.try_into_domain()?; :coderef[23]
     state
         .author_repo
         .create_author(&domain_req)
         .await
-        .map_err(ApiError::from)  ^24
-        .map(|ref author| ApiSuccess::new(StatusCode::CREATED, author.into())) ^25
+        .map_err(ApiError::from)  :coderef[24]
+        .map(|ref author| ApiSuccess::new(StatusCode::CREATED, author.into())) :coderef[25]
 }
 ```
 
@@ -999,10 +1005,10 @@ started
 from](https://www.howtocodeit.com/articles/master-hexagonal-architecture-rust#code-ref-5)
 if you need a reminder.
 
-Ok, the walkthrough. `create_author` has access to an `AuthorRepository` `^22`,
+Ok, the walkthrough. `create_author` has access to an `AuthorRepository` :codelink[22],
 which it makes good use of. But first, it converts the raw
 `CreateAuthorHttpRequestBody` it received from the client into the holy domain
-representation `^23`. Here's how:
+representation :codelink[23]. Here's how:
 
 ```rust
 /// The body of an [Author] creation request.
@@ -1039,20 +1045,20 @@ achieved.
 
 Thanks to the pains we took to define all the errors an `AuthorRepository` is
 allowed to return, constructing an HTTP response is dreamy. In the error case,
-we map seamlessly to a serializable `ApiError` using `ApiError::from` `^24`:
+we map seamlessly to a serializable `ApiError` using `ApiError::from` :codelink[24]:
 
 ```rust
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ApiError {
-    InternalServerError(String),  ^26
-    UnprocessableEntity(String),  ^27
+    InternalServerError(String),  :coderef[26]
+    UnprocessableEntity(String),  :coderef[27]
 }
 
 impl From<CreateAuthorError> for ApiError {
     fn from(e: CreateAuthorError) -> Self {
         match e {
             CreateAuthorError::Duplicate { name } => {
-                Self::UnprocessableEntity(format!("author with name {} already exists", name))  ^28
+                Self::UnprocessableEntity(format!("author with name {} already exists", name))  :coderef[28]
             }
             CreateAuthorError::Unknown(cause) => {
                 tracing::error!("{:?}\n{}", cause, cause.backtrace());
@@ -1071,10 +1077,10 @@ impl From<AuthorNameEmptyError> for ApiError {
 
 If the author was found to be a duplicate, it means the client's request was
 correctly structured, but that the contents were unprocessable. Hence, we're
-aiming to respond `422 Unprocessable Entity` `^27`.
+aiming to respond `422 Unprocessable Entity` :codelink[27].
 
 Important detail alert! Do you see how we're manually building an error message
-at `^28`, even though `CreateAuthorError::to_string` could have produced this
+at :codelink[28], even though `CreateAuthorError::to_string` could have produced this
 error for us?
 
 This is another instance of aggressive decoupling of our transport concern (JSON
@@ -1083,25 +1089,23 @@ users is an easy way to leak private details of your application. It also
 results in unexpected changes to HTTP responses when domain implementation
 details change!
 
-> Always separate your public errors from their domain representations.
+> "Always separate your public errors from their domain representations."
 
 If we get an error the domain didn't expect – `CreateAuthorError::Unknown` here
-– that maps straight to `InternalServerError` `^26`.
+– that maps straight to `InternalServerError` :codelink[26].
 
 The finer points of how you log the underlying cause will vary according to your
 needs. Crucially, however, the error itself is not exposed to the end user.
 
-
-@@@info
-Errors into HTTP responses
+:::aside{type=info}
+::uh1[Errors into HTTP responses]
 
 `ApiError` itself is transformed into an HTTP response with a JSON body by the
 axum `IntoResponse` trait. That's an axum implementation detail, though, and I
 don't want to get bogged down in that here.
-@@@
+:::
 
-
-Finally, our success case `^25`. We take a reference to the returned `Author`
+Finally, our success case :codelink[25]. We take a reference to the returned `Author`
 and transform it into its public API counterpart. It gets sent on its way with
 status `201 Created`.
 
@@ -1141,7 +1145,7 @@ mod tests {
 
     #[derive(Clone)]
     struct MockAuthorRepository {
-        create_author_result: Arc<Mutex<Result<Author, CreateAuthorError>>>,  ^29
+        create_author_result: Arc<Mutex<Result<Author, CreateAuthorError>>>,  :coderef[29]
     }
 
     impl AuthorRepository for MockAuthorRepository {
@@ -1152,16 +1156,16 @@ mod tests {
             let mut guard = self.create_author_result.lock().await;
 			let mut result = Err(CreateAuthorError::Unknown(anyhow!("substitute error")));
 			mem::swap(guard.deref_mut(), &mut result);
-			result ^30
+			result :coderef[30]
         }
     }
 }
 ```
 
 `MockAuthorRepository` is defined to hold the `Result` it should return in
-response `AuthorRepository::create_author` calls `^29` `^30`.
+response `AuthorRepository::create_author` calls :codelink[29] :codelink[30].
 
-The rather nasty type signature at `^29` is due to the fact that
+The rather nasty type signature at :codelink[29] is due to the fact that
 `AuthorRepository` has a `Clone` bound, which means `MockAuthorRespository` must
 be `Clone`.
 
@@ -1181,9 +1185,8 @@ works with minor changes to the supporting code).
 The mock implementation of `create_author` then deals with swapping a dummy
 value with the real result in order to return it to the test caller.
 
-
-@@@info
-Mockall
+:::aside{type=info}
+::uh1[Mockall]
 
 Some people like to craft mocks by hand. Personally, I don't think there are
 enough hours in the day.
@@ -1193,8 +1196,7 @@ life-saving `automock` macro to accelerate the process of mocking.
 
 It also provides argument matching, call counts, and everything else you'd
 expect from a featureful mocking crate.
-@@@
-
+:::
 
 Here's the test for the case where the repository call succeeds. I leave the
 error case to your powerful imagination, but if you crave more Rust testing
@@ -1205,7 +1207,7 @@ pearls, I'll have a comprehensive guide to unit testing for you soon!
 async fn test_create_author_success() {
     let author_name = AuthorName::new("Angus").unwrap();
     let author_id = Uuid::new_v4();
-    let repo = MockAuthorRepository {  ^31
+    let repo = MockAuthorRepository {  :coderef[31]
 	    create_author_result: Arc::new(Mutex::new(Ok(Author::new(
 	        author_id,
 	        author_name.clone(),
@@ -1217,14 +1219,14 @@ async fn test_create_author_success() {
     let body = axum::extract::Json(CreateAuthorHttpRequestBody {
         name: author_name.to_string(),
     });
-    let expected = ApiSuccess::new(  ^32
+    let expected = ApiSuccess::new(  :coderef[32]
         StatusCode::CREATED,
         CreateAuthorResponseData {
             id: author_id.to_string(),
         },
     );
 
-	let actual = create_author(state, body).await;  ^33
+	let actual = create_author(state, body).await;  :coderef[33]
 	assert!(
 	    actual.is_ok(),
 	    "expected create_author to succeed, but got {:?}",
@@ -1240,13 +1242,13 @@ async fn test_create_author_success() {
 }
 ```
 
-At `^31`, we construct a `MockAuthorRepository` with an arbitrary success
+At :codelink[31], we construct a `MockAuthorRepository` with an arbitrary success
 `Result`. We expect that a `Result::Ok(Author)` from the repo should produce a
-`Result::Ok(ApiSuccess<CreateAuthorResponseData>)` from the handler `^32`.
+`Result::Ok(ApiSuccess<CreateAuthorResponseData>)` from the handler :codelink[32].
 
 This situation is simple to set up – we just call the `create_author` handler
 with a `State` object constructed from the `MockAuthorRepository` in place of a
-real one `^33`. The assertions are self-explanatory.
+real one :codelink[33]. The assertions are self-explanatory.
 
 I know, I know – you're itching to see what `main` looks like with these
 improvements, but we're about to take a much bigger and more important leap in
@@ -1261,6 +1263,9 @@ through the lens of authentication, and explore the interface between hexagonal
 applications and distributed systems.
 
 And yes, we'll finally answer, "why hexagons?".
+::::::
+
+::::::part
 
 ## `Service`, the heart of hexagonal architecture
 
@@ -1286,9 +1291,8 @@ domain logic doesn't belong in adapters. Otherwise, when you swap out the
 adapter, you have to rewrite domain code that has nothing to do with the adapter
 implementation.
 
-
-@@@info
-Is this a plausible scenario?
+:::aside{type=info}
+::uh1[Is this a plausible scenario?]
 
 Reader TmLev raised an important point in the comments: how likely is it that
 you'll ever swap a database or request handler for some new implementation?
@@ -1309,8 +1313,7 @@ often.
 
 How often these occur is a function of both scale and growth rate. We'll tackle
 these topics in depth in [Part IV](#trade-offs-of-hexagonal-architecture-in-rust).
-@@@
-
+:::
 
 So, domain logic can't go in our HTTP handler, and it can't go in our
 `AuthorRepository`. Where does it live?
@@ -1339,7 +1342,7 @@ Let's spice up our application with some more domain traits:
 ```rust
 /// `AuthorMetrics` describes an aggregator of author-related metrics, such as a time-series
 /// database.
-pub trait AuthorMetrics: Send + Sync + Clone + 'static {  ^34
+pub trait AuthorMetrics: Send + Sync + Clone + 'static {  :coderef[34]
     /// Record a successful author creation.
     fn record_creation_success(&self) -> impl Future<Output = ()> + Send;
 
@@ -1348,7 +1351,7 @@ pub trait AuthorMetrics: Send + Sync + Clone + 'static {  ^34
 }
 
 /// `AuthorNotifier` triggers notifications to authors.
-pub trait AuthorNotifier: Send + Sync + Clone + 'static {  ^35
+pub trait AuthorNotifier: Send + Sync + Clone + 'static {  :coderef[35]
     fn author_created(&self, author: &Author) -> impl Future<Output = ()> + Send;
 }
 ```
@@ -1356,13 +1359,12 @@ pub trait AuthorNotifier: Send + Sync + Clone + 'static {  ^35
 Together with `AuthorRepository`, these ports illustrate the kinds of
 dependencies you might expect of a real production app.
 
-`AuthorMetrics` `^34` describes an aggregator of author-related metrics, such as
-a time-series database. `AuthorNotifier` `^35` triggers notifications to
+`AuthorMetrics` :codelink[34] describes an aggregator of author-related metrics, such as
+a time-series database. `AuthorNotifier` :codelink[35] triggers notifications to
 authors.
 
-
-@@@warning
-Finding the right abstraction
+:::aside{type=warning}
+::uh1[Finding the right abstraction]
 
 `AuthorNotifier` declares that the domain doesn't care about the medium used to
 notify authors, but this isn't universally true.
@@ -1375,8 +1377,7 @@ would be pointless.
 
 For others, code coordinating notifications will be complex enough to warrant
 its own domain.
-@@@
-
+:::
 
 Rather than stuffing these domain dependencies into `AppState` directly, we're
 aiming for this:
@@ -1421,7 +1422,7 @@ Now, the implementation of `AuthorService`:
 /// Canonical implementation of the [AuthorService] port, through which the author domain API is
 /// consumed.
 #[derive(Debug, Clone)]
-pub struct Service<R, M, N>  ^36
+pub struct Service<R, M, N>  :coderef[36]
 where
     R: AuthorRepository,
     M: AuthorMetrics,
@@ -1446,7 +1447,7 @@ where
 	///
 	/// - Propagates any [CreateAuthorError] returned by the [AuthorRepository].
     async fn create_author(&self, req: &CreateAuthorRequest) -> Result<Author, CreateAuthorError> {
-        let result = self.repo.create_author(req).await;  ^37
+        let result = self.repo.create_author(req).await;  :coderef[37]
         if result.is_err() {
             self.metrics.record_creation_failure().await;
         } else {
@@ -1460,9 +1461,9 @@ where
 ```
 
 The `Service` struct encapsulates the dependencies required to execute our
-business logic `^36`.
+business logic :codelink[36].
 
-The implementation of `AuthorService::create_author` `^37` illustrates why we
+The implementation of `AuthorService::create_author` :codelink[37] illustrates why we
 don't want to embed these calls directly in handler code, which has enough work
 to do just managing the request-response cycle.
 
@@ -1492,7 +1493,7 @@ This is what happens if you stick domain logic in your handlers. Without a
 
 Nope. No. Not today, thank you.
 
-> The `Service` trait keeps your unit test surface area sane.
+> "The `Service` trait keeps your unit test surface area sane."
 
 To test handlers that call a `Service`, you just mock the service, returning
 whatever success or error variant you need to check the handler's output.
@@ -1529,28 +1530,28 @@ async fn main() -> anyhow::Result<()> {
     // A minimal tracing middleware for request logging.
     tracing_subscriber::fmt::init();
 
-    let sqlite = Sqlite::new(&config.database_url).await?;  ^38
+    let sqlite = Sqlite::new(&config.database_url).await?;  :coderef[38]
     let metrics = Prometheus::new();
     let email_client = EmailClient::new();
-    let author_service = Service::new(sqlite, metrics, email_client);  ^39
+    let author_service = Service::new(sqlite, metrics, email_client);  :coderef[39]
 
     let server_config = HttpServerConfig {
         port: &config.server_port,
     };
-    let http_server = HttpServer::new(author_service, server_config).await?;  ^40
+    let http_server = HttpServer::new(author_service, server_config).await?;  :coderef[40]
     http_server.run().await
 }
 ```
 
 To do this, `main` needs to know which adapters to slot into the domain's ports
-`^38`. This example uses an SQLite `AuthorRepository`, Prometheus
+:codelink[38]. This example uses an SQLite `AuthorRepository`, Prometheus
 `AuthorMetrics` and an email-based `AuthorNotifier`.
 
 It combines these implementations of the domain traits into an `AuthorService`
-`^39` using the author domain's `Service` constructor.
+:codelink[39] using the author domain's `Service` constructor.
 
 Finishing up, it injects the `AuthorService` into an HTTP server and runs it
-`^40`.
+:codelink[40].
 
 Even though `main` knows which adapters we want to use, we still aim to not leak
 implementation details of third-party crates. Here are the `use` statements for
@@ -1580,7 +1581,7 @@ testing. It composes unmockable dependencies and handles errors by logging to
 stdout and exiting. The less code we put here, the smaller this testing dead
 zone.
 
-> The less code you put in `main`, the smaller your testing dead zone.
+> "The less code you put in `main`, the smaller your testing dead zone."
 
 Setup and configuration for integration tests is often subtly different from
 `main`, too. Imagine having to configure all the routes and middleware for an
@@ -1602,7 +1603,7 @@ Well, I hate to break it to you, but hexagons aren't special. There's no
 six-sided significance to hexagonal architecture. The truth is, any polygon will
 do.
 
-> Any polygon will do.
+> "Any polygon will do."
 
 Hexagonal architecture was [originally proposed by Alistair
 Cockburn](https://alistair.cockburn.us/hexagonal-architecture/), who chose
@@ -1613,7 +1614,7 @@ inbound and outbound adapters.
 I've been holding off on a classic hexagonal architecture diagram until I showed
 you how the ports and adapters compose. Here you go:
 
----image
+::figure{width=2747 height=1417 alt="A schematic representation of hexagonal architecture" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1719603202/hexagonal_architecture_8769b1f0cf.webp}
 
 The outside world is a scary, ever-changing place. Anything can go wrong at any
 time.
@@ -1624,9 +1625,8 @@ if, and only if, the requirements of your business change.
 The adapters are the bouncers enforcing the domain's dress code on anything from
 the outside that wants to get in.
 
-
-@@@info
-Use cases
+:::aside{type=info}
+::uh1[Use cases]
 
 In other writing on hexagonal architecture, you'll often see the terminology
 "use case".
@@ -1639,8 +1639,7 @@ Personally, I don't use this term. I find it to be jargon that complicates an
 already complex architecture.
 
 If it appeals to you, don't let me stop you!
-@@@
-
+:::
 
 ### How to choose the right domain boundaries
 
@@ -1656,9 +1655,8 @@ The bad news is that I can't answer these questions for you, because they depend
 heavily on variables like your scale, your overall system architecture and your
 requirements around synchronicity.
 
-
-@@@info
-Further reading on domain-driven design
+:::aside{type=info}
+::uh1[Further reading on domain-driven design]
 
 There are many books on the complex topic of domain-driven design, and I'd do it
 a disservice by giving you a rushed summary.
@@ -1674,25 +1672,22 @@ most technical:
 - [Learning Domain-Driven Design](https://www.amazon.com/Learning-Domain-Driven-Design-Aligning-Architecture/dp/1098100131)
 - [Implementing Domain-Driven Design](https://www.amazon.com/gp/product/0321834577/)
 - [Domain-Driven Design](https://www.amazon.com/Domain-Driven-Design-Tackling-Complexity-Software/dp/0321125215/)
-@@@info
-
+  :::
 
 The good news is, I have two powerful rules of thumb to help you make the right
 decision, and we'll go through some examples together.
 
 Firstly, a domain represents some tangible arm of your business.
 
-> A domain represents some tangible arm of your business.
+> "A domain represents some tangible arm of your business."
 
 I've been discussing an "author domain", because a using single-entity domain
 makes it easier to teach the concepts of hexagonal architecture.
 
-
-@@@info
+:::aside{type=info}
 An "entity" is a domain-driven design term for a uniquely identifiable object,
 like an `Author`.
-@@@
-
+:::
 
 For a small blogging app, however, it's likely that a single "blog domain" would
 be the correct boundary to draw, since there is only one business concern
@@ -1709,12 +1704,11 @@ microservices in Part IV.
 Secondly, a domain should include all entities that must change together as part
 of a single, atomic operation.
 
-> A domain should include all entities that must change together as part of a
-> single, atomic operation.
+> "A domain should include all entities that must change together as part of a
+> single, atomic operation."
 
-
-@@@warning
-On atomicity
+:::aside{type=warning}
+::uh1[On atomicity]
 
 When I hear the word "atomic", my brain jumps straight to "transactions" in the
 relational database sense of the word.
@@ -1724,8 +1718,7 @@ doesn't care about repository implementation details.
 
 Atomicity at the service level is the domain saying "I don't care how you do it,
 but these changes must appear to happen at the same time".
-@@@
-
+:::
 
 Consider our blogging app. The author domain manages the lifecycle of an
 `Author`. But what about blog posts?
@@ -1753,12 +1746,11 @@ cross-domain operations atomically, your domain boundaries are wrong.
 Cross-domain operations are never atomic. These entities should be part of the
 same domain.
 
-> If you leak transactions into your business logic to perform cross-domain
-> operations atomically, your domain boundaries are wrong.
+> "If you leak transactions into your business logic to perform cross-domain
+> operations atomically, your domain boundaries are wrong."
 
-
-@@@warning
-Entities vs. records
+:::aside{type=warning}
+::uh1[Entities vs. records]
 
 An entity is a uniquely identifiable object described by your business logic,
 like an `Author`. This is not necessarily the same as a record in a database.
@@ -1775,8 +1767,7 @@ this data across many tables.
 Further, different domains may share the same underlying data source, but
 interpret it differently. A billing domain `Customer` type might also need user
 data, but details about authorship aren't relevant.
-@@@
-
+:::
 
 #### Start with large domains
 
@@ -1808,7 +1799,7 @@ A fat domain makes no assumptions about how different business functions will
 evolve over time. It can be decomposed as the need arises, and maintains all the
 benefits of easy atomicity until that time comes.
 
-> Start with a single, large domain.
+> "Start with a single, large domain."
 
 #### Authentication and authorization with hexagonal architecture
 
@@ -1862,7 +1853,7 @@ In addition to the vast volume of data to be processed, there will be a huge
 amount of internal and regulatory process to follow in the course of this
 deletion. This can't be modeled as an atomic operation.
 
-> At a certain scale, `User` deletion can't be modeled atomically.
+> "At a certain scale, `User` deletion can't be modeled atomically."
 
 ### A Rust project template for hexagonal architecture
 
@@ -1891,6 +1882,9 @@ Document your decisions, _I beg you_.
 In Part IV, we'll be discussing the trade-offs of using hexagonal architecture
 compared with other common architectures, and see how it simplifies the jump to
 microservices when the time is right.
+::::::
+
+::::::part
 
 ## Trade-offs of hexagonal architecture in Rust
 
@@ -1912,7 +1906,7 @@ effective path to destroy the other. To their surprise, however, the map shows
 nothing but a great swamp, without end or beginning. This is "The Middle
 Ground".
 
-> Email sign-up
+::subscribe
 
 ### Strengths and weaknesses of hexagonal architecture
 
@@ -1921,29 +1915,30 @@ architectures, and whether it's the optimal architecture for you depends on
 whether you want to crush a car or a Coke can.
 
 Parts I to III showed off the strengths of hexagonal architecture:
-* It's highly decoupled, making it a pleasure to evolve and scale.
-* It greatly increases your unit test surface for rigorous testing of code with
+
+- It's highly decoupled, making it a pleasure to evolve and scale.
+- It greatly increases your unit test surface for rigorous testing of code with
   complex failure modes.
-* There's a single source of truth for the logic of each business domain, with a
+- There's a single source of truth for the logic of each business domain, with a
   correspondingly simple dependency graph.
-* There's a home for everything. A predictable project structure keeps your code
+- There's a home for everything. A predictable project structure keeps your code
   organized and your team happy.
 
 Nothing comes for free, though. What are the costs?
 
-Compared to the Very Bad Application `^1`, our hexagonal app takes a lot more
+Compared to the Very Bad Application :codelink[1], our hexagonal app takes a lot more
 code to achieve the same result. Instead of a raw, axum HTTP handler that simply
 takes the request body and shoves it straight into an SQLite database, we have
 multiple layers of abstraction:
 
-* axum becomes an implementation detail, concealed by our own HTTP package.
-* The request body must be converted to a domain representation before we can
+- axum becomes an implementation detail, concealed by our own HTTP package.
+- The request body must be converted to a domain representation before we can
   work with it.
-* Business logic is encapsulated by the `Service` trait and injected into the
+- Business logic is encapsulated by the `Service` trait and injected into the
   handler.
-* SQLite is an implementation detail hidden behind a repository trait
+- SQLite is an implementation detail hidden behind a repository trait
   implementation.
-* Anything we pull out of the database has to be converted to a domain
+- Anything we pull out of the database has to be converted to a domain
   representation before it can be used.
 
 This isn't boilerplate. It's not useless filler. All this extra code is required
@@ -1970,8 +1965,8 @@ initiatives like adopting hexagonal architecture are led by evangelists learning
 on their own time. Sadly, they're doomed to fail, because building this way
 requires a culture that gets everyone on the same page.
 
-> Adopting hexagonal architecture isn't just a technical investment, it's a
-> cultural one.
+> "Adopting hexagonal architecture isn't just a technical investment, it's a
+> cultural one."
 
 Assuming I haven't scared you off, let's go through some examples to help you
 decide if hexagonal architecture is right for you.
@@ -1997,8 +1992,8 @@ However, I do recommend small, personal projects as playgrounds to learn and
 experiment with hexagonal architecture. Building a complete application, even a
 trivial one, will develop your ability to think hexagonally.
 
-> Use small, personal projects as playgrounds to learn and experiment with
-> hexagonal architecture.
+> "Use small, personal projects as playgrounds to learn and experiment with
+> hexagonal architecture."
 
 Legacy code is created by engineers learning new techniques on the job. Take the
 time to build your intuition in a low-stakes environment. Go deep on details
@@ -2014,7 +2009,7 @@ deserializing a kilobyte of JSON the most ambitious thing it's done this week?
 Don't overcomplicate things. Apps that don't have any business logic don't need
 ports and adapters – there's nothing to encapsulate.
 
-> Apps that don't have any business logic don't need ports and adapters.
+> "Apps that don't have any business logic don't need ports and adapters."
 
 If you're compelled to test your request handlers in isolation from your data
 store, you might still consider using the repository pattern. On the other hand,
@@ -2037,18 +2032,17 @@ danger. It lets you support new customer needs without mangling what already
 works. It's not just an architecture _of_ scale, it's an architecture _for
 scaling_.
 
-> It's not just an architecture _of_ scale, it's an architecture _for scaling_.
+> "It's not just an architecture _of_ scale, it's an architecture _for scaling_."
 
-
-@@@warning
-"Founders don't have time for tests"
+:::aside{type=warning}
+::uh1["Founders don't have time for tests"]
 
 There's a common sentiment that writing tests is incompatible with launching a
 business quickly. If a founder is burning the midnight oil, why would they be
 adding tests instead of features?
 
 Maybe this was true once, but we live in an age where generative AI can spit out
-comprehensive unit tests in seconds. In your house style, no less.*
+comprehensive unit tests in seconds. In your house style, no less.\*
 
 I've found AI-generated tests to be particularly accurate when there are clear
 abstraction boundaries between the different layers of your code. For example,
@@ -2057,12 +2051,7 @@ need to fit the service implementation in its context.
 
 This is already the hallmark of a well-architected application – if your goal is
 to scale, the benefits of hexagonal coding compound.
-
-\*_As of November 2024, I find I'm most productive using
-[Cursor](https://www.cursor.com/) hooked up to [Claude 3.5
-Sonnet](https://www.anthropic.com/news/claude-3-5-sonnet)._
-@@@
-
+:::
 
 Hexagonal architecture also saves you from true folly – launching your product
 as microservices.
@@ -2077,11 +2066,11 @@ should be are often wrong. User behavior causes applications to evolve
 organically. As domains get smaller, you'll find yourself correcting the
 boundaries – and their dependent code – more often.
 
-> Battle-testing your app reveals entities and relations you can't predict.
+> "Battle-testing your app reveals entities and relations you can't predict."
 
 Now imagine you work for a stealth start-up building its MVP. Karl, the founder,
 calls you over to talk architecture. You're concerned by Karl's recent weight
-loss and accelerated balding. Did he always have that facial tic? 
+loss and accelerated balding. Did he always have that facial tic?
 
 Your company doesn't have customers yet, but Karl claims to know what the
 correct domain boundaries are, having seen them in a dream. You think this
@@ -2090,17 +2079,15 @@ unlikely, since he doesn't appear to have slept.
 Karl is so confident in these boundaries that he orders you to place each domain
 in a separate microservice. In the face of your protests, he mutters something
 about "extreme scale" and "the valuation", and sacrifices a goat to the dark god
-of network partitions*.
+of network partitions\*.
 
 This is what go-live looks like with microservices. All the pain of incorrect
 domain boundaries, now with network hops.
 
-
-@@@info
+:::aside{type=info}
 \*There exists no language in which His dark name can be pronounced. The closest
 known representation in English rhymes with "works on my machine".
-@@@
-
+:::
 
 By starting with a coarse-grained hexagonal monolith, you can refine your domain
 boundaries in response to observed use patterns. If and when you reach the
@@ -2113,7 +2100,7 @@ could be a request from another domain running in the same process. It could be
 an RPC from an internal microservice, or a RESTful request from the outside
 world. It doesn't matter.
 
-> Hexagonal architecture _scales_.
+> "Hexagonal architecture _scales_."
 
 #### Big team, big monolith, big headache
 
@@ -2126,8 +2113,8 @@ If this is you, and you have the power to lead architectural change, please
 consider refactoring your chaotic evil monolith to a hexagonal monolith before
 making the leap to microservices.
 
-> If you can't build a modular monolith, you're not qualified to run
-> microservices.
+> "If you can't build a modular monolith, you're not qualified to run
+> microservices."
 
 The situation won't be improved by pulling out a group of features that look
 like they belong together, putting them somewhere else on the network, and
@@ -2147,7 +2134,7 @@ extract from the monolith. Your first stab at decomposition shouldn't move this
 to a microservice, but to a clearly bounded domain within the existing monolith,
 called via ports and adapters.
 
-> Migrate to clearly bounded domains within your existing monolith.
+> "Migrate to clearly bounded domains within your existing monolith."
 
 Observe how the the rest of the tangled, heretical codebase interfaces with your
 hexagonal sanctuary. Refine the boundaries until they stabilize. This is much
@@ -2159,8 +2146,8 @@ organizational pressures (teams treading on each other's toes) and resource
 pressures (big boxes to run big apps). How does hexagonal decomposition address
 that if all the code still lives in the same app?
 
-> Prioritize the code that causes the biggest organizational and resource
-> pressures.
+> "Prioritize the code that causes the biggest organizational and resource
+> pressures."
 
 An old monolith may take years to decompose, but it's not an all-or-nothing
 process. Prioritize the code that causes the biggest organizational and resource
@@ -2170,7 +2157,7 @@ don't have to refactor the whole application before extracting stable domain
 APIs.
 
 By rushing towards a distributed architecture, you'll turn a bad monolith into
-bad microservices. *Legacy®: Networked Edition*.
+bad microservices. _Legacy®: Networked Edition_.
 
 By guinea-pigging internal domains, you introduce the network complexity only
 after the business complexity is solved.
@@ -2188,11 +2175,11 @@ architecture to cultivate a serene glade within Mirkwood.
 
 Here's why:
 
-* The business logic must be at least moderately complex, or the business
+- The business logic must be at least moderately complex, or the business
   wouldn't bother assembling a team for it.
-* Dependencies like databases, message queues, etc. will _certainly_ change
+- Dependencies like databases, message queues, etc. will _certainly_ change
   based on the whims and shifting preferences of higher-ranking managers.
-* This project – assuming it isn't canned when the quarterly earnings fall short
+- This project – assuming it isn't canned when the quarterly earnings fall short
   – may be maintained for years, by hundreds of people who aren't you. You owe
   them a sane project structure with proper test coverage.
 
@@ -2221,21 +2208,27 @@ If you've decided that hexagonal architecture meets your needs, the fifth and
 final section of this guide will leave you with a wealth of practical Rust
 recipes. Each one will address a specific problem you might encounter as you
 adopt hexagonal architecture. I'm so excited to hear what you build.
+::::::
 
-## Part V: Advanced hexagonal architecture in Rust
+::::::part
+
+## Advanced hexagonal architecture in Rust
 
 _Part five is coming next!_
+::::::
 
-## Exercises
-
-1. 🦀 Pick a large codebase that you work on regularly. Take some time to study
-   it and list its hard-coded dependencies.
+::::::exercises
+:::exercise{difficulty=1}
+Pick a large codebase that you work on regularly. Take some time to study it and
+list its hard-coded dependencies.
 
 These are the dependencies that, if they disappeared from the internet tomorrow,
 would force you to change many functionally unrelated parts of your application.
+:::
 
-2. 🦀 Try to identify the parts of your codebase that these dependencies don't
-   belong in, but would be hard to remove from.
+:::exercise{difficulty=1}
+Try to identify the parts of your codebase that these dependencies don't belong
+in, but would be hard to remove from.
 
 Are your HTTP handlers talking to databases? Are you configuring middleware in
 main? Have Kafka errors leaked into non-Kafka code? Do you have RPC data models
@@ -2243,15 +2236,23 @@ anywhere outside of RPC modules?
 
 For any application of significant size, none of this is a sign of good health.
 Start auditing what seems "leaky". We're going to fix it.
+:::
 
-3. 🦀🦀 Define async `find` and `findAll` methods on `AuthorRepository`.
+:::exercise{difficulty=2}
+Define async `find` and `findAll` methods on `AuthorRepository`.
 
 Consider the error scenarios your domain should handle and design return types
 to cover these cases.
+:::
 
-4. 🦀🦀 Implement your extended `AuthorRepository` for a database of your
-   choice, using my `Sqlite` struct as reference.
+:::exercise{difficulty=2}
+Implement your extended `AuthorRepository` for a database of your choice, using
+my `Sqlite` struct as reference.
 
 How will you handle unexpected error scenarios? Will you panic or return a
 catch-all domain error variant? You should feel confident that you could defend
 your decision in a hypothetical code review.
+:::
+::::::
+
+::discussion{title="Master hexagonal architecture in Rust"}
