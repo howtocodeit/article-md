@@ -6,11 +6,12 @@ meta_title: Rust In Space! How Rust is Powering Next-Generation Space Mission Si
 description: Learn to model 13 billion years of time with an inside look at a European Space Agency mission simulator.
 meta_description: Learn to model 13 billion years of time in Rust with an inside look at a European Space Agency mission simulator.
 tags: [rust, type-driven design, video, rustconf]
-version: 1.0.5
+version: 1.0.6
 color: peony
 hero_image_url: https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734514113/crabstronaut_300x300_831f9dfbde.webp
 hero_image_alt: An astronaut with crab pincers floats in space
 og_image_url: https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734512468/og_8e44a3f93c.webp
+published_at: 2024-12-18
 ---
 
 # Rust in space
