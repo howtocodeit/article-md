@@ -1,13 +1,23 @@
 ---
+slug: rust-in-space
+git_tag_base: rust-in-space
 title: Rust In Space! How Rust is powering next-generation space mission simulators
 meta_title: Rust In Space! How Rust is Powering Next-Generation Space Mission Simulators
-slug: rust-in-space
 description: Learn to model 13 billion years of time with an inside look at a European Space Agency mission simulator.
 meta_description: Learn to model 13 billion years of time in Rust with an inside look at a European Space Agency mission simulator.
-color: peony
 tags: [rust, type-driven design, video, rustconf]
-version: 1.0.4
+version: 1.0.5
+color: peony
+hero_image_url: https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734514113/crabstronaut_300x300_831f9dfbde.webp
+hero_image_alt: An astronaut with crab pincers floats in space
+og_image_url: https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734512468/og_8e44a3f93c.webp
 ---
+
+# Rust in space
+
+::toc
+
+::::::guide
 
 ## Introduction
 
@@ -27,13 +37,17 @@ Fifth Law of Thermodynamics if we stray too far from software engineering.
 
 For those who prefer the silence of the void, here are [the complete slides for the talk](https://docs.google.com/presentation/d/1nAUbbKHDrMSGnDsKFn3sBYLgkv9KPc0K2lYiyEE83iw/edit?usp=sharing), and I've included my speaker notes below.
 
+::subscribe
+
 ## The talk
 
-||https://www.youtube.com/embed/zMxlVEKRonk||
+::youtube{id=zMxlVEKRonk}
 
 ## Speaker notes
 
-#### Slide 1
+::uh3[Slide 1]
+
+::figure{width=960 height=540 alt="Slide 1" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522431/Rust_In_Space_7dd60614fc.jpg}
 
 Good morning! I’m Angus, and I am here to give you an inside look at Rust in the space industry. And, as a bonus, in just 25 minutes' time, you'll be able to model 13 billion years of time with femtosecond precision in seven astronomical time scales. No background in astrophysics required. It’s not rocket science.
 
@@ -41,7 +55,9 @@ We’re going to see how Rust is powering the next generation of space mission s
 
 First, though, I’m going to release an elephant into the room by telling you that…
 
-#### Slide 2
+::uh3[Slide 2]
+
+::figure{width=960 height=540 alt="Slide 2" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522618/Rust_In_Space_1_f7a3ecdd2f.jpg}
 
 I’m a software engineer, not a doctor. I don’t have any formal education in astrophysics, and in my spare time, I teach Rust on my site, [howtocodeit.com](/).
 
@@ -53,7 +69,9 @@ And that was a lie. So the last year has been quite uncomfortable for me. Not be
 
 To show you how Rust is bringing balance to the Force, let’s establish some context.
 
-#### Slide 3
+::uh3[Slide 3]
+
+::figure{width=960 height=540 alt="Slide 3" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522622/Rust_In_Space_2_af8f786686.jpg}
 
 I am a core team member for Ephemerista, a new, open-source space mission simulator.
 
@@ -61,14 +79,16 @@ It is wholly funded by the European Space Agency, and maintained by the [Libre S
 
 When complete, it will include GUI mission planning and analysis tools, a Python API tailored to flight dynamics engineers and mission analysts, and pluggable integrations with existing tools, all backed by Lox, an ergonomic Rust astrodynamics library which is rapidly approaching v1.
 
-#### Slide 4
+::uh3[Slide 4]
+
+::figure{width=960 height=540 alt="Slide 4" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522620/Rust_In_Space_3_ad0d3760ea.jpg}
 
 An astrodynamics library has a lot of responsibilities.
 
--   We’d like to know how to get from A to B, where A and B move in three dimensions and may be so massive that they alter the flow of time itself.
--   Getting from A to B takes a certain amount of fuel, and to calculate that, we need a delta-v budget: the total change in velocity from the maneuvers we perform along the way.
--   After launching our payload into space, we need to communicate with it. For that, we need to know the link budget of the mission.
--   And of course, it would be nice to know how likely we are to crash our multi-million dollar spacecraft into something else, particularly when it’s someone else’s multimillion-dollar spacecraft.
+- We’d like to know how to get from A to B, where A and B move in three dimensions and may be so massive that they alter the flow of time itself.
+- Getting from A to B takes a certain amount of fuel, and to calculate that, we need a delta-v budget: the total change in velocity from the maneuvers we perform along the way.
+- After launching our payload into space, we need to communicate with it. For that, we need to know the link budget of the mission.
+- And of course, it would be nice to know how likely we are to crash our multi-million dollar spacecraft into something else, particularly when it’s someone else’s multimillion-dollar spacecraft.
 
 Spaceflight necessarily involves a lot of testing in prod, but without mission simulators, each launch would be equivalent to sticking your finger in the air and hoping for the best.
 
@@ -76,7 +96,9 @@ Here we see that, through simulation, Ferris has identified a critical vulnerabi
 
 Of course, we’ve all seen the documentary, _Star Wars Episode IV: A New Hope_. We know how it ends, and this is because Ferris works for Boeing.
 
-#### Slide 5
+::uh3[Slide 5]
+
+::figure{width=960 height=540 alt="Slide 5" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522625/Rust_In_Space_4_e3d6dc7c56.jpg}
 
 I keep saying “next-generation”, and not just for the _Star Trek_ pun.
 
@@ -92,7 +114,9 @@ And, since the number of safe orbits is limited, we essentially have a gold rush
 
 If we value open access to space, high-quality, free, open-source software is a critical piece of that puzzle.
 
-#### Slide 6
+::uh3[Slide 6]
+
+::figure{width=960 height=540 alt="Slide 6" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522625/Rust_In_Space_5_703647191b.jpg}
 
 Commercial mission simulators are hugely expensive. They cost less than a rocket launch, but you’ll need a mortgage, not a credit card.
 
@@ -108,7 +132,9 @@ And a typical mission analyst works at a higher level of abstraction than an ast
 
 And even if they can afford both, combining old tools in new and exciting ways produces new and frustrating failure modes. In the 10th circle of hell, the guilty call Java astrodynamics routines from MATLAB and try debug the results.
 
-#### Slide 7
+::uh3[Slide 7]
+
+::figure{width=960 height=540 alt="Slide 7" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522623/Rust_In_Space_6_2a3b4284e1.jpg}
 
 So what makes Rust a better backend for a modern space mission simulator?
 
@@ -124,9 +150,13 @@ To prove that to you, we’re going to do some domain modeling. Starting from a 
 
 So. A gentle warm-up question before we stare directly into the time vortex…
 
-#### Slide 8
+::uh3[Slide 8]
 
-#### Slide 9
+::figure{width=960 height=540 alt="Slide 8" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522621/Rust_In_Space_7_965d40ec64.jpg}
+
+::uh3[Slide 9]
+
+::figure{width=960 height=540 alt="Slide 9" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522622/Rust_In_Space_8_ca7d02373f.jpg}
 
 Well, I have a background in web development, so as far as I'm concerned, time began on
 January 1, 1970, and it's been going up in nanoseconds ever since.
@@ -134,7 +164,9 @@ January 1, 1970, and it's been going up in nanoseconds ever since.
 If you take this view of the universe, time fits very nicely inside an `i64`. But there are two
 opposing problems with this model in the context of a space mission simulator:
 
-#### Slide 10
+::uh3[Slide 10]
+
+::figure{width=960 height=540 alt="Slide 10" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522624/Rust_In_Space_9_b9b84a53cb.jpg}
 
 On one hand, an `i64` is too small. It gives us roughly 18 quintillion nanoseconds to play with – about ±300 years.
 
@@ -150,7 +182,9 @@ How do we improve on an `i64` representation of time? Let’s try standing on th
 
 Fortran is like catnip to physicists. They can neither have nor want nice things. We going to look at the SOFA C representation, aaaaand…
 
-#### Slide 11
+::uh3[Slide 11]
+
+::figure{width=960 height=540 alt="Slide 11" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522623/Rust_In_Space_10_9f39d91023.jpg}
 
 It’s… two `double`s. Straight-up. Just two `double`s. The time relative to some epoch, usually J2000, is represented as the sum of two 64-bit floating-point numbers.
 
@@ -164,7 +198,9 @@ _Chef’s kiss_.
 
 There’s value here though. With a bit of type-driven Rust, we can codify the good ideas and prevent users from cutting themselves on the sharp edges.
 
-#### Slide 12
+::uh3[Slide 12]
+
+::figure{width=960 height=540 alt="Slide 12" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522623/Rust_In_Space_11_97114a13f0.jpg}
 
 First, we take one of those doubles, and restrict it to an integral number of seconds relative to J2000. An `i64` might not give us enough nanoseconds to play with, but it fits an order of magnitude more seconds than age of the known universe.
 
@@ -180,7 +216,9 @@ Except… this doesn’t work.
 
 Or rather, it’s not enough, because there is one thing to ruin it all–
 
-#### Slide 13
+::uh3[Slide 13]
+
+::figure{width=960 height=540 alt="Slide 13" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522623/Rust_In_Space_12_4d0bdba95a.jpg}
 
 UTC, or, as I’ve come to know it, the Devil’s Time Scale, cannot be unambiguously represented as a monotonic counter.
 
@@ -188,13 +226,15 @@ UTC is an unholy hybrid of International Atomic Time or TAI – an average of th
 
 UTC is kept within ±0.9s of UT1 by the inclusion of leap seconds, which are decided about six months in advance by the International Earth Rotation and Systems Service. They have the best Christmas parties.
 
-If I give you the time 536,500,836 seconds since J2000, are we at midnight on 1 January 2017, or 23:59:60 during the leap second of 31 December 2016?
+If I give you the time 536,500,836 seconds since J2000, are we at midnight on 1 January 2017, or 23\:59\:60 during the leap second of 31 December 2016?
 
 And I say “inclusion” of leap seconds, not “addition” of leap seconds. Because leap seconds are allowed to be negative. They never have been, but they can be.
 
 The speed of the Earth’s rotation changes over time. Since UTC was introduced in 1960, it has tended to slow, causing us to add leap seconds to stop UTC getting too far ahead of UT1. Since 2020, however, the Earth has been spinning faster, and if that trend continues, well, good luck being on call during a negative leap second.
 
-#### Slide 14
+::uh3[Slide 14]
+
+::figure{width=960 height=540 alt="Slide 14" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522625/Rust_In_Space_13_cfc4ec54fb.jpg}
 
 UTC is just the tip of the iceberg. Astronomers work with time in a minimum of seven time scales, from good old atomic time to TDB which is based on a clock that moves with the solar system’s center of mass and accounts for time dilation.
 
@@ -202,7 +242,9 @@ On this slide, you’ll see that Corro the Unsafe Rusturchin is marking the two 
 
 Lox has to model all of these and transform between them in an ergonomic, intuitive way. Let’s start with the representation of the time scale itself.
 
-#### Slide 15
+::uh3[Slide 15]
+
+::figure{width=960 height=540 alt="Slide 15" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522625/Rust_In_Space_14_09e19fd95a.jpg}
 
 Luckily, every timescale that isn’t UTC is guaranteed to increase monotonically. Our base time representation with an `i64` second and an `f64` subsecond is sound – we just need to pair this data with some indicator of its timescale.
 
@@ -212,7 +254,9 @@ But we can’t specify bounds on enums like we do with traits. We can’t define
 
 Instead, we defined a `TimeScale` marker trait and implemented it for a dedicated, zero-sized struct for each time scale.
 
-#### Slide 16
+::uh3[Slide 16]
+
+::figure{width=960 height=540 alt="Slide 16" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522624/Rust_In_Space_15_1e20c34a94.jpg}
 
 With `TimeScale` as our trait bound, we can implement a generic time type that combines a delta since an epoch with a scale – and since each `TimeScale` is zero-sized, it takes no more space than the raw timestamp.
 
@@ -222,7 +266,9 @@ Unfortunately not. Nature works in mysterious ways, and since Python is a dynami
 
 If you don’t need Python, rest easy in the knowledge that this field weighs nothing.
 
-#### Slide 17
+::uh3[Slide 17]
+
+::figure{width=960 height=540 alt="Slide 17" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522625/Rust_In_Space_16_f706b911db.jpg}
 
 Back in the Land of Shadows, we made the decision early that, although we can’t cast UTC into the fire, we can contain it.
 
@@ -234,7 +280,9 @@ We achieve that through the `LeapSecondsProvider` trait. Lox provides a default 
 
 We don’t have time to get into the implementation, but do feel free to ask me your leap second questions in the Discord chat for this talk.
 
-#### Slide 18
+::uh3[Slide 18]
+
+::figure{width=960 height=540 alt="Slide 18" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522625/Rust_In_Space_17_da16b0ba43.jpg}
 
 How do we specify time scale transformations?
 
@@ -252,7 +300,9 @@ That means we need a current source of Earth Orientation Parameters based on obs
 
 Given our stated goal of an ergonomic and intuitive API for astronomical time – this appears to suck. How can we provide a high-level interface that is convenient to call with whatever timestamp the user has to hand, without creating a mess of speculative dependencies for unrelated transformations?
 
-#### Slide 19
+::uh3[Slide 19]
+
+::figure{width=960 height=540 alt="Slide 19" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522625/Rust_In_Space_18_6505a75cce.jpg}
 
 If we squint, however, we can just about make out a homogenous set of time scale transformations. And with Rust, we can fluently articulate this relationship in code.
 
@@ -262,7 +312,9 @@ If we squint, however, we can just about make out a homogenous set of time scale
 
 We know better, of course. Most transformations – constant, linear, or four dimensional – are infallible, and the first step on our journey from blunt instrument to keen edge is to implement `OffsetProvider` for `NoOpOffsetProvider`, a zero-sized struct that does nothing, without fail.
 
-#### Slide 20
+::uh3[Slide 20]
+
+::figure{width=960 height=540 alt="Slide 20" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522625/Rust_In_Space_19_11c0dc6e1c.jpg}
 
 This starts a process of progressive trait specialization, where each tightening of the trait bounds exposes a more convenient but more situational subset of time scale transformations.
 
@@ -270,13 +322,17 @@ We define `ToScale`, bounded by an infallible `TryToScale` based on `NoOpOffsetP
 
 Even better, we can blanket implement `ToScale` for any type that implements an infallible `TryToScale`, saving the maintainers the headache of doing it manually. Thank you, Rust.
 
-#### Slide 21
+::uh3[Slide 21]
+
+::figure{width=960 height=540 alt="Slide 21" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522625/Rust_In_Space_20_3b0b4089d7.jpg}
 
 This process continues to the level of single-scale transformations. Traits `ToTai`, `ToTt`, and so on, specify zero-argument, infallible methods with default implementations for all pairs of simple transformations.
 
 This is amazingly convenient, and Rust gives us that convenience readably, statically and without sacrificing the ability to work with time as a homogenous set.
 
-#### Slide 22
+::uh3[Slide 22]
+
+::figure{width=960 height=540 alt="Slide 22" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522625/Rust_In_Space_21_912f942af7.jpg}
 
 What about fallible transformations?
 
@@ -286,7 +342,9 @@ We do the same for the UT1-TAI pairing, which depends on data derived from obser
 
 There are no `ToUt1` or `ToUtc` traits, because they are fundamentally fallible operations.
 
-#### Slide 23
+::uh3[Slide 23]
+
+::figure{width=960 height=540 alt="Slide 23" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522625/Rust_In_Space_22_373db0bf80.jpg}
 
 Putting it all together, we have a collection of traits that allows Lox and third-party users of the lox-time crate extraordinary flexibility to design types and call signatures based not just on the concrete timescales that a particular algorithm requires, but on the graph of time scale transformations.
 
@@ -294,10 +352,15 @@ Rather than “give me TAI” we can say “give me any, infallible path to TAI�
 
 And that is how you model all of time in Rust.
 
-#### Slide 24
+::uh3[Slide 24]
 
-Thank you so much for listening, you can find Lox on GitHub at the link in this presentation. For the YouTube crowd I will bat my eyelids at the organizers and ask them to put a link in the description.
+::figure{width=960 height=540 alt="Slide 24" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734522624/Rust_In_Space_23_b8e842a0da.jpg}
+
+Thank you so much for listening, you can find [Lox on GitHub](https://github.com/lox-space/lox) at the link in this presentation. For the YouTube crowd I will bat my eyelids at the organizers and ask them to put a link in the description.
 
 You can find more of my work at howtocodeit.com or reach out to me directly at angus@howtocodeit.com.
 
 I will be taking questions after the talk. Remember, I am not an astrophysicist – if you ask questions me questions too far from Rust, I reserve the right to not publicly embarrass myself.
+::::::
+
+::discussion{title="Rust In Space! How Rust is powering next-generation space mission simulators"}
