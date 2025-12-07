@@ -6,7 +6,7 @@ meta_title: Writing Production Rust Macros with macro_rules!
 description: Learn how experts write real production macros.
 meta_description: Learn how experts write real production Rust macros with macro_rules!
 tags: [rust, macros]
-version: 1.0.5
+version: 1.0.6
 color: turquoise
 hero_image_url: https://res.cloudinary.com/dkh7xdo6x/image/upload/v1720168270/wizard_crab_300x300_f8d7890dd6.webp
 hero_image_alt: Illustration of a crab in a wizard's hat
