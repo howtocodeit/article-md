@@ -6,7 +6,7 @@ meta_title: "Ownership By Example: Merging Linked Lists in Rust"
 description: Grok Rust's ownership model with a "simple" linked list coding challenge.
 meta_description: Grok Rust's ownership model with a "simple" linked list coding challenge.
 tags: [rust, ownership, data structures, algorithms]
-version: 1.1.1
+version: 1.1.2
 color: orange
 hero_image_url: https://res.cloudinary.com/dkh7xdo6x/image/upload/v1718046669/two_headed_snake_grayscale_e09dcd2373.webp
 hero_image_alt: Illustration of a two-headed snake
@@ -18,7 +18,7 @@ published_at: 2024-06-10
 
 ::toc
 
-::::::guide
+::::::standalone
 
 ## Introduction
 
