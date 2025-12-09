@@ -6,7 +6,7 @@ meta_title: Master Hexagonal Architecture in Rust
 description: Take the pain out of scaling. This guide has everything you need to write flexible, future-proof Rust applications using hexagonal architecture.
 meta_description: Everything you need to write flexible, future-proof Rust applications using hexagonal architecture.
 tags: [rust, architecture, type-driven design]
-version: 1.1.6
+version: 1.1.7
 color: hornet
 hero_image_url: https://res.cloudinary.com/dkh7xdo6x/image/upload/v1717695236/honeybee_300x300_1c85e8f99e.webp
 hero_image_alt: Illustration of a bee
@@ -18,7 +18,7 @@ published_at: 2024-06-06
 
 ::toc
 
-:::part{numbered=false}
+::::::part{numbered=false}
 
 ## Introduction
 
