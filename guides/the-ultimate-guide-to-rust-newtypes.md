@@ -6,7 +6,7 @@ meta_title: The Ultimate Guide to Rust Newtypes
 description: Clean up your code, clarify business logic and improve test coverage with Rust's newtype wrappers.
 meta_description: Clean up your code, clarify business logic and improve test coverage with Rust's newtype wrappers.
 tags: [rust, newtypes, type-driven design]
-version: 1.0.14
+version: 1.0.15
 color: peony
 hero_image_url: https://res.cloudinary.com/dkh7xdo6x/image/upload/v1734678002/mechacrab_300x300_e0c164f945.webp
 hero_image_alt: Illustration of a new type of railgun-mounted mecha-crab
@@ -18,7 +18,7 @@ published_at: 2025-05-13
 
 ::toc
 
-::::::guide
+::::::standalone
 
 ## What are newtype wrappers in Rust?
 
