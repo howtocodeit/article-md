@@ -13,7 +13,7 @@ published_at: 2024-06-11
 
 # Join me at RustConf 2024!
 
-::::::standalone
+::::::standalone{type=update}
 I'm incredibly excited to share that I’m speaking at RustConf in Montreal in September! 🦀
 
 My talk will pull back the curtain on Rust in the space industry, sharing insight from my work on Ephemerista, a new, open-source space mission simulator funded by the European Space Agency and maintained by the Libre Space Foundation. 🚀
