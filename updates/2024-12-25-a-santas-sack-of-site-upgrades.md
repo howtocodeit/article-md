@@ -1,13 +1,19 @@
 ---
+slug: a-santas-sack-of-site-upgrades
 title: A Santa's sack of site upgrades
 meta_title: A Santa's Sack of Site Upgrades
-slug: a-santas-sack-of-site-upgrades
 description: A festive round-up of the improvements I've been making to _How To Code It_.
 meta_description: A festive round-up of the improvements I've been making to How To Code It.
 color: turquoise
-version: 1.0.0
+hero_image_url: https://res.cloudinary.com/dkh7xdo6x/image/upload/v1735151728/santa_crab_300x300_751b56a38c.webp
+hero_image_alt: Illustration of a crab wearing a Santa hat
+og_image_url: https://res.cloudinary.com/dkh7xdo6x/image/upload/v1735152615/og_292b172839.webp
+published_at: 2024-12-25
 ---
 
+# A Santa's sack of site upgrades
+
+::::::standalone{type=update}
 Merry Christmas, one and all. Except people who don't comment their code – may your turkey be dry
 and your in-laws slow to leave.
 
@@ -19,11 +25,15 @@ Behold how your stocking overflows with site improvements to enhance your learni
 
 ## Multi-part guides
 
+::figure{width=1714 height=852 alt="Screenshot of Part I of a multipart guide" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1735153194/multipart_guides_3891d44058.webp}
+
 _How To Code It_ now renders multi-part guides in a much more compelling way, helping you structure your reading and get an intuitive outline of the content.
 
-Isn't this a feature I should have launched with? Well, no one sets out to write [7,000 words on error handling](http://localhost:3000/articles/the-definitive-guide-to-rust-error-handling) and [12,000 words on hexagonal architecture](http://localhost:3000/articles/master-hexagonal-architecture-rust) – it just happens. When it does, you need a format to do it justice.
+Isn't this a feature I should have launched with? Well, no one sets out to write [7,000 words on error handling](/articles/the-definitive-guide-to-rust-error-handling) and [12,000 words on hexagonal architecture](/articles/master-hexagonal-architecture-rust) – it just happens. When it does, you need a format to do it justice.
 
 ## Improved code blocks
+
+::figure{width=1532 height=328 alt="Screenshot of the improved code blocks" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1735153846/improved_code_blocks_39689b8a50.webp}
 
 _How To Code It_'s signature referenced code blocks have been decked out with language, crate and
 filepath details where relevant. Mobile readers will find that this seamlessly collapses to
@@ -33,6 +43,8 @@ You can also copy a code block with the click of a button! It even removes the r
 for you.
 
 ## Version control
+
+::figure{width=1684 height=718 alt="Screenshot of an article header showing the version number with commit link" url=https://res.cloudinary.com/dkh7xdo6x/image/upload/v1735154107/versioned_header_66e733f89a.webp}
 
 Sometimes, improbable though it may seem, I am wrong. As people of learning, _How To Code It_ readers are quick to pounce on inaccuracies and hold me to the right standard.
 
@@ -57,3 +69,6 @@ or taken part in the community discussion.
 
 I'm overjoyed to have found a group of people who share my passion for Rust and a belief in better
 code. May the coming year bring you prosperity and comfort in Ferris' pincered embrace.
+::::::
+
+::signature
